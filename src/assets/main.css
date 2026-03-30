@@ -1,0 +1,130 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-serif: 'Playfair Display', 'Georgia', serif;
+  --font-sans: 'Inter', 'Helvetica Neue', sans-serif;
+  --font-headline: 'UnifrakturMaguntia', cursive;
+
+  --color-cream: #f5f0e8;
+  --color-cream-dark: #e8e0d0;
+  --color-beige: #d4c5a9;
+  --color-ink: #1a1a1a;
+  --color-ink-light: #3a3a3a;
+  --color-paper: #faf8f3;
+  --color-accent: #8b7355;
+  --color-gold: #c4a265;
+  --color-red: #8b2500;
+}
+
+@layer base {
+  @font-face {
+    font-family: 'Playfair Display';
+    font-style: normal;
+    font-weight: 400 900;
+    font-display: swap;
+    src: url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&display=swap');
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-cream);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@utility newspaper-border {
+  border: 2px solid var(--color-ink);
+}
+
+@utility newspaper-border-thin {
+  border: 1px solid var(--color-ink);
+}
+
+@utility newspaper-divider {
+  border-top: 1px solid var(--color-ink);
+}
+
+@utility newspaper-divider-thick {
+  border-top: 3px double var(--color-ink);
+}
+
+@utility vintage-shadow {
+  box-shadow: 4px 4px 0px var(--color-ink);
+}
+
+@utility paper-texture {
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 29px,
+    rgba(0, 0, 0, 0.03) 29px,
+    rgba(0, 0, 0, 0.03) 30px
+  );
+}
+
+@utility grain-overlay {
+  position: relative;
+}
+
+@utility btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 2rem;
+  background-color: var(--color-ink);
+  color: var(--color-cream);
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+@utility btn-primary-hover {
+  background-color: var(--color-ink-light);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+@utility btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 2rem;
+  border: 2px solid var(--color-ink);
+  color: var(--color-ink);
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+@utility scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility text-overflow-clip {
+  overflow: hidden;
+  text-overflow: clip;
+  word-break: break-word;
+}
+
+@utility newspaper-text {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings:
+    'liga' 1,
+    'kern' 1;
+  hanging-punctuation: first;
+  hyphens: auto;
+}
