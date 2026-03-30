@@ -1,5 +1,6 @@
 import { useEditorStore } from '@/stores/editor'
 import { jsPDF } from 'jspdf'
+import { getTextureById, applyCanvasTexture } from '@/utils/paper-textures'
 
 function getFilterStyle(filter?: string): string {
   switch (filter) {
@@ -26,12 +27,17 @@ function createRenderCanvas(): Promise<HTMLCanvasElement> {
     const ctx = canvas.getContext('2d')!
     const scale = 2
 
+    // Paper texture
+    const texture = getTextureById(store.paperTexture)
+    const bgColor = store.paperTexture !== 'plain' ? texture.background : template.background
+    const inkColor = texture.inkColor
+
     // Background
-    ctx.fillStyle = template.background
+    ctx.fillStyle = bgColor
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-    // Grain noise overlay (subtle)
-    addGrainEffect(ctx, canvas.width, canvas.height)
+    // Texture / grain overlay
+    applyCanvasTexture(ctx, store.paperTexture, canvas.width, canvas.height)
 
     const imagePromises: Promise<void>[] = []
 
@@ -42,14 +48,14 @@ function createRenderCanvas(): Promise<HTMLCanvasElement> {
         const text = content?.text ?? slot.content ?? ''
         if (!text) {
           // Draw borders even if empty
-          drawSlotBorders(ctx, slot, scale)
+          drawSlotBorders(ctx, slot, scale, inkColor)
           continue
         }
 
         ctx.save()
 
         // Borders
-        drawSlotBorders(ctx, slot, scale)
+        drawSlotBorders(ctx, slot, scale, inkColor)
 
         // Text styling
         const fontStyle = slot.fontStyle === 'italic' ? 'italic ' : ''
@@ -57,7 +63,7 @@ function createRenderCanvas(): Promise<HTMLCanvasElement> {
         const fontSize = (slot.fontSize || 12) * scale
         const fontFamily = slot.fontFamily || 'serif'
         ctx.font = `${fontStyle}${fontWeight} ${fontSize}px ${fontFamily}`
-        ctx.fillStyle = '#1A1A1A'
+        ctx.fillStyle = inkColor
         ctx.textBaseline = 'top'
 
         const x = slot.x * scale
@@ -115,12 +121,15 @@ function createRenderCanvas(): Promise<HTMLCanvasElement> {
               ctx.filter = filterStyle
             }
 
-            // Draw image with cover behavior
+            // Draw image with cover behavior + zoom/offset
             const dx = slot.x * scale
             const dy = slot.y * scale
             const dw = slot.w * scale
             const dh = slot.h * scale
-            drawImageCover(ctx, img, dx, dy, dw, dh)
+            const imgZoom = content.imageZoom ?? 1
+            const imgOffsetX = content.imageOffsetX ?? 0
+            const imgOffsetY = content.imageOffsetY ?? 0
+            drawImageCover(ctx, img, dx, dy, dw, dh, imgZoom, imgOffsetX, imgOffsetY)
 
             ctx.restore()
             resolveImg()
@@ -138,8 +147,13 @@ function createRenderCanvas(): Promise<HTMLCanvasElement> {
   })
 }
 
-function drawSlotBorders(ctx: CanvasRenderingContext2D, slot: any, scale: number) {
-  ctx.strokeStyle = '#1A1A1A'
+function drawSlotBorders(
+  ctx: CanvasRenderingContext2D,
+  slot: any,
+  scale: number,
+  inkColor: string = '#1A1A1A',
+) {
+  ctx.strokeStyle = inkColor
   ctx.lineWidth = 1 * scale
   if (slot.borderTop) {
     ctx.beginPath()
@@ -162,6 +176,9 @@ function drawImageCover(
   dy: number,
   dw: number,
   dh: number,
+  zoom: number = 1,
+  offsetX: number = 0,
+  offsetY: number = 0,
 ) {
   const imgRatio = img.naturalWidth / img.naturalHeight
   const slotRatio = dw / dh
@@ -177,6 +194,24 @@ function drawImageCover(
     sh = sw / slotRatio
     sx = 0
     sy = (img.naturalHeight - sh) / 2
+  }
+
+  // Apply zoom: shrink the source rect (shows less of the image = zoom in)
+  if (zoom > 1) {
+    const newSw = sw / zoom
+    const newSh = sh / zoom
+    sx += (sw - newSw) / 2
+    sy += (sh - newSh) / 2
+    // Apply offset (in source pixels)
+    const maxOffsetSrc = (sw - newSw) / 2
+    const offsetScale = maxOffsetSrc / ((50 * (zoom - 1)) / zoom) // match the UI maxOffset formula
+    sx -= offsetX * offsetScale
+    sy -= offsetY * offsetScale
+    // Clamp
+    sx = Math.max(0, Math.min(img.naturalWidth - newSw, sx))
+    sy = Math.max(0, Math.min(img.naturalHeight - newSh, sy))
+    sw = newSw
+    sh = newSh
   }
 
   ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh)
@@ -216,18 +251,6 @@ function wrapText(
     ctx.fillText(line.trim(), x, currentY)
     currentY += lineHeight
   }
-}
-
-function addGrainEffect(ctx: CanvasRenderingContext2D, width: number, height: number) {
-  const imageData = ctx.getImageData(0, 0, width, height)
-  const data = imageData.data
-  for (let i = 0; i < data.length; i += 4) {
-    const grain = (Math.random() - 0.5) * 8
-    data[i] = Math.min(255, Math.max(0, data[i]! + grain))
-    data[i + 1] = Math.min(255, Math.max(0, data[i + 1]! + grain))
-    data[i + 2] = Math.min(255, Math.max(0, data[i + 2]! + grain))
-  }
-  ctx.putImageData(imageData, 0, 0)
 }
 
 export async function exportAsPNG(): Promise<void> {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useEditorStore } from '@/stores/editor'
+import { PAPER_TEXTURES } from '@/utils/paper-textures'
 
 const store = useEditorStore()
 
@@ -83,6 +84,39 @@ function applyFilterToAll() {
       >
         {{ store.showGrid ? 'Grid On' : 'Grid Off' }}
       </button>
+    </div>
+
+    <!-- Paper Texture -->
+    <div>
+      <h3
+        class="font-[Playfair_Display] text-sm font-semibold text-[var(--color-ink)] mb-2 tracking-wider uppercase"
+      >
+        Paper Texture
+      </h3>
+      <div class="grid grid-cols-3 gap-1.5">
+        <button
+          v-for="t in PAPER_TEXTURES"
+          :key="t.id"
+          @click="store.setPaperTexture(t.id)"
+          :class="[
+            'flex flex-col items-center gap-1 p-1.5 border transition-all',
+            store.paperTexture === t.id
+              ? 'border-[var(--color-ink)] bg-[var(--color-ink)]/[0.06] shadow-sm'
+              : 'border-[var(--color-ink)]/10 hover:border-[var(--color-ink)]/40 hover:bg-[var(--color-ink)]/[0.02]',
+          ]"
+          :title="t.description"
+        >
+          <div
+            class="w-full h-7 border border-[var(--color-ink)]/10 rounded-sm"
+            :style="{ background: t.swatchStyle }"
+          ></div>
+          <span
+            class="font-[Inter] text-[8px] tracking-wider uppercase text-[var(--color-ink)] leading-none"
+          >
+            {{ t.name }}
+          </span>
+        </button>
+      </div>
     </div>
 
     <!-- Filter Selection -->

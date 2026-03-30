@@ -5,6 +5,8 @@ import {
   type NewspaperTemplate,
   type TemplateSlot,
 } from '@/templates/newspaper-templates'
+import { type PaperTextureId } from '@/utils/paper-textures'
+import { resizeImage } from '@/utils/image-resize'
 
 export interface UploadedPhoto {
   id: string
@@ -20,6 +22,9 @@ export interface SlotContent {
   photoId?: string
   text?: string
   filter?: 'none' | 'grayscale' | 'sepia' | 'vintage'
+  imageZoom?: number
+  imageOffsetX?: number
+  imageOffsetY?: number
 }
 
 export const useEditorStore = defineStore('editor', () => {
@@ -30,6 +35,7 @@ export const useEditorStore = defineStore('editor', () => {
   const slotContents = ref<Map<string, SlotContent>>(new Map())
   const currentStep = ref<'template' | 'editor' | 'preview'>('template')
   const activeFilter = ref<'none' | 'grayscale' | 'sepia' | 'vintage'>('none')
+  const paperTexture = ref<PaperTextureId>('plain')
   const showGrid = ref(false)
   const zoomLevel = ref(1)
 
@@ -73,11 +79,32 @@ export const useEditorStore = defineStore('editor', () => {
     selectedPaperSize.value = size
   }
 
-  function addPhotos(files: File[]) {
+  async function addPhotos(files: File[]) {
     for (const file of files) {
       const id = `photo-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
-      const url = URL.createObjectURL(file)
+      try {
+        const url = await resizeImage(file)
+        photos.value.push({ id, file, url, name: file.name })
+      } catch {
+        console.warn(`Skipping file ${file.name}: failed to process`)
+      }
+    }
+  }
+
+  async function addPhotoToSlot(file: File, slotId: string) {
+    const id = `photo-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+    try {
+      const url = await resizeImage(file)
       photos.value.push({ id, file, url, name: file.name })
+      slotContents.value.set(slotId, {
+        slotId,
+        type: 'image',
+        imageUrl: url,
+        photoId: id,
+        filter: activeFilter.value,
+      })
+    } catch {
+      console.warn(`Failed to process file ${file.name}`)
     }
   }
 
@@ -128,6 +155,20 @@ export const useEditorStore = defineStore('editor', () => {
     }
   }
 
+  function updateSlotImageTransform(
+    slotId: string,
+    zoom: number,
+    offsetX: number,
+    offsetY: number,
+  ) {
+    const existing = slotContents.value.get(slotId)
+    if (existing && existing.type === 'image') {
+      existing.imageZoom = zoom
+      existing.imageOffsetX = offsetX
+      existing.imageOffsetY = offsetY
+    }
+  }
+
   function removeSlotContent(slotId: string) {
     slotContents.value.delete(slotId)
   }
@@ -148,6 +189,10 @@ export const useEditorStore = defineStore('editor', () => {
     activeFilter.value = filter
   }
 
+  function setPaperTexture(id: PaperTextureId) {
+    paperTexture.value = id
+  }
+
   function resetEditor() {
     selectedTemplate.value = null
     photos.value.forEach((p) => URL.revokeObjectURL(p.url))
@@ -155,6 +200,7 @@ export const useEditorStore = defineStore('editor', () => {
     slotContents.value = new Map()
     currentStep.value = 'template'
     activeFilter.value = 'none'
+    paperTexture.value = 'plain'
     showGrid.value = false
     zoomLevel.value = 1
   }
@@ -184,6 +230,7 @@ export const useEditorStore = defineStore('editor', () => {
     slotContents,
     currentStep,
     activeFilter,
+    paperTexture,
     showGrid,
     zoomLevel,
     // Getters
@@ -204,8 +251,11 @@ export const useEditorStore = defineStore('editor', () => {
     setZoom,
     toggleGrid,
     setFilter,
+    setPaperTexture,
     resetEditor,
     getSlotContent,
     autoAssignPhotos,
+    addPhotoToSlot,
+    updateSlotImageTransform,
   }
 })

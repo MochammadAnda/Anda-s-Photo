@@ -335,7 +335,7 @@ function startCreating() {
               class="bg-[var(--color-paper)] newspaper-border p-6 mb-4 hover:vintage-shadow transition-shadow duration-300"
             >
               <div class="text-[8px] tracking-[0.4em] uppercase text-[var(--color-accent)] mb-2">
-                ✦ Est. 2024 ✦
+                ✦ Est. 2026 ✦
               </div>
               <div class="font-[Playfair_Display] text-xl font-bold tracking-[0.3em] mb-2">
                 PORTRAIT

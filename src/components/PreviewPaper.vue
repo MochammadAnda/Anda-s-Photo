@@ -1,16 +1,20 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useEditorStore } from '@/stores/editor'
+import { getTextureById, getPaperOverlayStyle } from '@/utils/paper-textures'
 
 const store = useEditorStore()
 const previewMode = ref<'flat' | '3d'>('flat')
+const previewScale = ref(0.55)
 const paperRotateX = ref(10)
 const paperRotateY = ref(-5)
 const isDragging3D = ref(false)
 const lastMouse = ref({ x: 0, y: 0 })
 
 const template = computed(() => store.selectedTemplate)
+const currentTexture = computed(() => getTextureById(store.paperTexture))
 
+// Identical to EditorCanvas – keeps rendering consistent
 function getFilterStyle(slotId: string): string {
   const content = store.getSlotContent(slotId)
   if (!content || content.type !== 'image') return ''
@@ -25,6 +29,25 @@ function getFilterStyle(slotId: string): string {
       return ''
   }
 }
+
+function getImageTransformStyle(slotId: string) {
+  const content = store.getSlotContent(slotId)
+  const zoom = content?.imageZoom ?? 1
+  const ox = content?.imageOffsetX ?? 0
+  const oy = content?.imageOffsetY ?? 0
+  return {
+    transform: `scale(${zoom}) translate(${ox}px, ${oy}px)`,
+    transformOrigin: 'center center',
+  }
+}
+
+const paperTransform = computed(() => {
+  const s = previewScale.value
+  if (previewMode.value === '3d') {
+    return `scale(${s}) rotateX(${paperRotateX.value}deg) rotateY(${paperRotateY.value}deg)`
+  }
+  return `scale(${s})`
+})
 
 function startDrag3D(e: MouseEvent) {
   if (previewMode.value !== '3d') return
@@ -46,36 +69,68 @@ function onDrag3D(e: MouseEvent) {
 function endDrag3D() {
   isDragging3D.value = false
 }
+
+function zoomPreview(delta: number) {
+  previewScale.value = Math.max(0.2, Math.min(1, previewScale.value + delta))
+}
 </script>
 
 <template>
   <div class="flex flex-col h-full">
     <!-- Preview Controls -->
-    <div class="flex items-center justify-between mb-4 px-4">
+    <div
+      class="flex items-center justify-between py-3 px-4 border-b border-[var(--color-ink)]/10 bg-[var(--color-paper)]"
+    >
       <h2 class="font-[Playfair_Display] text-xl font-bold text-[var(--color-ink)]">Preview</h2>
-      <div class="flex items-center gap-2">
-        <button
-          @click="previewMode = 'flat'"
-          :class="[
-            'px-4 py-2 text-xs font-[Inter] tracking-wider uppercase border transition-colors',
-            previewMode === 'flat'
-              ? 'bg-[var(--color-ink)] text-[var(--color-cream)] border-[var(--color-ink)]'
-              : 'border-[var(--color-ink)]/20 hover:border-[var(--color-ink)]',
-          ]"
-        >
-          Flat
-        </button>
-        <button
-          @click="previewMode = '3d'"
-          :class="[
-            'px-4 py-2 text-xs font-[Inter] tracking-wider uppercase border transition-colors',
-            previewMode === '3d'
-              ? 'bg-[var(--color-ink)] text-[var(--color-cream)] border-[var(--color-ink)]'
-              : 'border-[var(--color-ink)]/20 hover:border-[var(--color-ink)]',
-          ]"
-        >
-          3D Paper
-        </button>
+
+      <div class="flex items-center gap-4">
+        <!-- Preview zoom -->
+        <div class="flex items-center gap-2">
+          <button
+            @click="zoomPreview(-0.05)"
+            class="w-7 h-7 border border-[var(--color-ink)]/20 flex items-center justify-center hover:bg-[var(--color-ink)] hover:text-[var(--color-cream)] transition-colors text-xs"
+          >
+            −
+          </button>
+          <span
+            class="font-[Inter] text-[11px] text-[var(--color-ink-light)] w-10 text-center tabular-nums"
+            >{{ Math.round(previewScale * 100) }}%</span
+          >
+          <button
+            @click="zoomPreview(0.05)"
+            class="w-7 h-7 border border-[var(--color-ink)]/20 flex items-center justify-center hover:bg-[var(--color-ink)] hover:text-[var(--color-cream)] transition-colors text-xs"
+          >
+            +
+          </button>
+        </div>
+
+        <div class="h-5 w-px bg-[var(--color-ink)]/15"></div>
+
+        <!-- View mode toggle -->
+        <div class="flex items-center gap-1">
+          <button
+            @click="previewMode = 'flat'"
+            :class="[
+              'px-3 py-1.5 text-[11px] font-[Inter] tracking-wider uppercase border transition-colors',
+              previewMode === 'flat'
+                ? 'bg-[var(--color-ink)] text-[var(--color-cream)] border-[var(--color-ink)]'
+                : 'border-[var(--color-ink)]/20 hover:border-[var(--color-ink)]',
+            ]"
+          >
+            Flat
+          </button>
+          <button
+            @click="previewMode = '3d'"
+            :class="[
+              'px-3 py-1.5 text-[11px] font-[Inter] tracking-wider uppercase border transition-colors',
+              previewMode === '3d'
+                ? 'bg-[var(--color-ink)] text-[var(--color-cream)] border-[var(--color-ink)]'
+                : 'border-[var(--color-ink)]/20 hover:border-[var(--color-ink)]',
+            ]"
+          >
+            3D Paper
+          </button>
+        </div>
       </div>
     </div>
 
@@ -88,108 +143,134 @@ function endDrag3D() {
       @mouseup="endDrag3D"
       @mouseleave="endDrag3D"
     >
+      <!--
+        Outer wrapper: reserves the scaled dimensions in the flow.
+        Inner paper: renders at 1:1 (same as EditorCanvas), then CSS-scaled.
+        This guarantees the preview is pixel-identical to the editor.
+      -->
       <div
         v-if="template"
-        class="relative shadow-2xl transition-transform duration-100"
         :style="{
-          width: template.width * 0.55 + 'px',
-          height: template.height * 0.55 + 'px',
-          background: template.background,
-          transform:
-            previewMode === '3d'
-              ? `rotateX(${paperRotateX}deg) rotateY(${paperRotateY}deg)`
-              : 'none',
-          transformStyle: 'preserve-3d',
+          width: template.width * previewScale + 'px',
+          height: template.height * previewScale + 'px',
         }"
       >
-        <!-- Paper shadow for 3D -->
         <div
-          v-if="previewMode === '3d'"
-          class="absolute inset-0 -z-10"
+          class="relative shadow-2xl transition-transform duration-100"
           :style="{
-            boxShadow: `${-paperRotateY}px ${paperRotateX}px 40px rgba(0,0,0,0.3)`,
-            transform: 'translateZ(-2px)',
+            width: template.width + 'px',
+            height: template.height + 'px',
+            background:
+              store.paperTexture !== 'plain' ? currentTexture.background : template.background,
+            color: currentTexture.inkColor,
+            '--color-ink': currentTexture.inkColor,
+            transform: paperTransform,
+            transformOrigin: 'top left',
+            transformStyle: previewMode === '3d' ? 'preserve-3d' : undefined,
           }"
-        ></div>
-
-        <!-- Grain overlay -->
-        <div
-          class="absolute inset-0 pointer-events-none z-50 opacity-[0.04]"
-          :style="{
-            backgroundImage: `url('data:image/svg+xml,${encodeURIComponent(`<svg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>`)}')`,
-          }"
-        ></div>
-
-        <!-- Slots at 55% scale -->
-        <template v-for="slot in template.slots" :key="slot.id">
-          <!-- Image slot -->
+        >
+          <!-- Paper shadow for 3D -->
           <div
-            v-if="slot.type === 'image'"
-            class="absolute overflow-hidden"
+            v-if="previewMode === '3d'"
+            class="absolute inset-0 -z-10"
             :style="{
-              left: slot.x * 0.55 + 'px',
-              top: slot.y * 0.55 + 'px',
-              width: slot.w * 0.55 + 'px',
-              height: slot.h * 0.55 + 'px',
+              boxShadow: `${-paperRotateY}px ${paperRotateX}px 40px rgba(0,0,0,0.3)`,
+              transform: 'translateZ(-2px)',
             }"
-          >
-            <img
-              v-if="store.getSlotContent(slot.id)?.imageUrl"
-              :src="store.getSlotContent(slot.id)!.imageUrl!"
-              class="w-full h-full object-cover"
-              :style="{ filter: getFilterStyle(slot.id) }"
-            />
+          ></div>
+
+          <!-- Texture / Grain overlay (behind content, only affects paper) -->
+          <div
+            class="absolute inset-0 pointer-events-none z-[1]"
+            :style="getPaperOverlayStyle(store.paperTexture)"
+          ></div>
+
+          <!-- Slots: exact same coordinates as EditorCanvas (1:1) -->
+          <template v-for="slot in template.slots" :key="slot.id">
+            <!-- Image slot -->
             <div
-              v-else
-              class="w-full h-full bg-[var(--color-ink)]/[0.05] flex items-center justify-center"
+              v-if="slot.type === 'image'"
+              class="absolute overflow-hidden z-[2]"
+              :style="{
+                left: slot.x + 'px',
+                top: slot.y + 'px',
+                width: slot.w + 'px',
+                height: slot.h + 'px',
+              }"
             >
-              <span
-                class="text-[8px] font-[Inter] text-[var(--color-ink)]/20 uppercase tracking-wider"
-                >{{ slot.placeholder }}</span
+              <img
+                v-if="store.getSlotContent(slot.id)?.imageUrl"
+                :src="store.getSlotContent(slot.id)!.imageUrl!"
+                class="w-full h-full object-cover"
+                :style="{ filter: getFilterStyle(slot.id), ...getImageTransformStyle(slot.id) }"
+              />
+              <div
+                v-else
+                class="w-full h-full bg-[var(--color-ink)]/[0.05] flex items-center justify-center"
               >
+                <span
+                  class="text-xs font-[Inter] text-[var(--color-ink)]/20 uppercase tracking-wider"
+                  >{{ slot.placeholder }}</span
+                >
+              </div>
             </div>
-          </div>
 
-          <!-- Text slot -->
+            <!-- Text slot -->
+            <div
+              v-else-if="slot.type === 'text'"
+              class="absolute overflow-hidden z-[2]"
+              :style="{
+                left: slot.x + 'px',
+                top: slot.y + 'px',
+                width: slot.w + 'px',
+                height: slot.h + 'px',
+                fontFamily: slot.fontFamily || 'inherit',
+                fontSize: (slot.fontSize || 12) + 'px',
+                fontWeight: slot.fontWeight || 'normal',
+                fontStyle: slot.fontStyle || 'normal',
+                textAlign: (slot.textAlign as any) || 'left',
+                letterSpacing: slot.letterSpacing ? slot.letterSpacing + 'px' : undefined,
+                lineHeight: slot.lineHeight || 1.4,
+                textTransform: (slot.textTransform as any) || 'none',
+                borderTop: slot.borderTop ? '1px solid var(--color-ink)' : undefined,
+                borderBottom: slot.borderBottom ? '1px solid var(--color-ink)' : undefined,
+                display: 'flex',
+                alignItems: slot.borderTop && slot.borderBottom ? 'center' : 'flex-start',
+                justifyContent:
+                  slot.textAlign === 'center'
+                    ? 'center'
+                    : slot.textAlign === 'right'
+                      ? 'flex-end'
+                      : 'flex-start',
+                padding: slot.borderTop || slot.borderBottom ? '4px 0' : '0',
+              }"
+            >
+              <span class="whitespace-pre-wrap w-full">
+                {{ store.getSlotContent(slot.id)?.text ?? slot.content }}
+              </span>
+            </div>
+          </template>
+
+          <!-- Decorative fold line (flat mode) -->
           <div
-            v-else-if="slot.type === 'text'"
-            class="absolute overflow-hidden"
+            v-if="previewMode === 'flat'"
+            class="absolute left-0 right-0 pointer-events-none z-[3]"
             :style="{
-              left: slot.x * 0.55 + 'px',
-              top: slot.y * 0.55 + 'px',
-              width: slot.w * 0.55 + 'px',
-              height: slot.h * 0.55 + 'px',
-              fontFamily: slot.fontFamily || 'inherit',
-              fontSize: (slot.fontSize || 12) * 0.55 + 'px',
-              fontWeight: slot.fontWeight || 'normal',
-              fontStyle: slot.fontStyle || 'normal',
-              textAlign: (slot.textAlign as any) || 'left',
-              letterSpacing: slot.letterSpacing ? slot.letterSpacing * 0.55 + 'px' : undefined,
-              lineHeight: slot.lineHeight || 1.4,
-              textTransform: (slot.textTransform as any) || 'none',
-              borderTop: slot.borderTop ? '1px solid var(--color-ink)' : undefined,
-              borderBottom: slot.borderBottom ? '1px solid var(--color-ink)' : undefined,
-              display: 'flex',
-              alignItems: slot.borderTop && slot.borderBottom ? 'center' : 'flex-start',
-              justifyContent:
-                slot.textAlign === 'center'
-                  ? 'center'
-                  : slot.textAlign === 'right'
-                    ? 'flex-end'
-                    : 'flex-start',
-              padding: slot.borderTop || slot.borderBottom ? '2px 0' : '0',
+              top: '50%',
+              height: '1px',
+              background:
+                'linear-gradient(90deg, transparent, rgba(0,0,0,0.04) 15%, rgba(0,0,0,0.06) 50%, rgba(0,0,0,0.04) 85%, transparent)',
             }"
-          >
-            <span class="whitespace-pre-wrap w-full">
-              {{ store.getSlotContent(slot.id)?.text ?? slot.content }}
-            </span>
-          </div>
-        </template>
+          ></div>
+        </div>
       </div>
     </div>
 
     <!-- 3D hint -->
-    <div v-if="previewMode === '3d'" class="text-center py-2">
+    <div
+      v-if="previewMode === '3d'"
+      class="text-center py-2 bg-[var(--color-paper)] border-t border-[var(--color-ink)]/10"
+    >
       <span class="text-xs font-[Inter] text-[var(--color-ink-light)]"
         >Click and drag to rotate the paper</span
       >
