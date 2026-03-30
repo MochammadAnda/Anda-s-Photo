@@ -84,7 +84,7 @@ function resetAll() {
           </button>
           <div class="h-6 w-px bg-[var(--color-ink)]/10"></div>
           <span class="font-[UnifrakturMaguntia] text-xl text-[var(--color-ink)]"
-            >The Daily Photo</span
+            >The Anda's Photo</span
           >
         </div>
 

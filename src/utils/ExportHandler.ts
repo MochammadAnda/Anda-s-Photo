@@ -1,6 +1,7 @@
 import { useEditorStore } from '@/stores/editor'
 import { jsPDF } from 'jspdf'
 import { getTextureById, applyCanvasTexture } from '@/utils/paper-textures'
+import type { TemplateSlot } from '@/templates/newspaper-templates'
 
 function getFilterStyle(filter?: string): string {
   switch (filter) {
@@ -39,109 +40,117 @@ function createRenderCanvas(): Promise<HTMLCanvasElement> {
     // Texture / grain overlay
     applyCanvasTexture(ctx, store.paperTexture, canvas.width, canvas.height)
 
-    const imagePromises: Promise<void>[] = []
+    // Pre-load ALL images first so we can draw slots in correct template order
+    // (matches DOM z-index — slots that appear later in the template are on top)
+    const imageCache = new Map<string, HTMLImageElement>()
+    const loadPromises: Promise<void>[] = []
 
     for (const slot of template.slots) {
       const content = store.getSlotContent(slot.id)
-
-      if (slot.type === 'text') {
-        const text = content?.text ?? slot.content ?? ''
-        if (!text) {
-          // Draw borders even if empty
-          drawSlotBorders(ctx, slot, scale, inkColor)
-          continue
-        }
-
-        ctx.save()
-
-        // Borders
-        drawSlotBorders(ctx, slot, scale, inkColor)
-
-        // Text styling
-        const fontStyle = slot.fontStyle === 'italic' ? 'italic ' : ''
-        const fontWeight = slot.fontWeight || 'normal'
-        const fontSize = (slot.fontSize || 12) * scale
-        const fontFamily = slot.fontFamily || 'serif'
-        ctx.font = `${fontStyle}${fontWeight} ${fontSize}px ${fontFamily}`
-        ctx.fillStyle = inkColor
-        ctx.textBaseline = 'top'
-
-        const x = slot.x * scale
-        const y = slot.y * scale + (slot.borderTop ? 8 : 0)
-        const maxWidth = slot.w * scale
-        const lineHeightVal = (slot.lineHeight || 1.4) * fontSize
-
-        // Text alignment
-        if (slot.textAlign === 'center') {
-          ctx.textAlign = 'center'
-          wrapText(
-            ctx,
-            text,
-            x + maxWidth / 2,
-            y,
-            maxWidth,
-            lineHeightVal,
-            slot.letterSpacing ? slot.letterSpacing * scale : 0,
-          )
-        } else if (slot.textAlign === 'right') {
-          ctx.textAlign = 'right'
-          wrapText(
-            ctx,
-            text,
-            x + maxWidth,
-            y,
-            maxWidth,
-            lineHeightVal,
-            slot.letterSpacing ? slot.letterSpacing * scale : 0,
-          )
-        } else {
-          ctx.textAlign = 'left'
-          wrapText(
-            ctx,
-            text,
-            x,
-            y,
-            maxWidth,
-            lineHeightVal,
-            slot.letterSpacing ? slot.letterSpacing * scale : 0,
-          )
-        }
-
-        ctx.restore()
-      } else if (slot.type === 'image' && content?.imageUrl) {
+      if (slot.type === 'image' && content?.imageUrl) {
         const promise = new Promise<void>((resolveImg) => {
           const img = new Image()
-          img.crossOrigin = 'anonymous'
           img.onload = () => {
-            ctx.save()
-
-            // Apply filter
-            const filterStyle = getFilterStyle(content.filter)
-            if (filterStyle !== 'none') {
-              ctx.filter = filterStyle
-            }
-
-            // Draw image with cover behavior + zoom/offset
-            const dx = slot.x * scale
-            const dy = slot.y * scale
-            const dw = slot.w * scale
-            const dh = slot.h * scale
-            const imgZoom = content.imageZoom ?? 1
-            const imgOffsetX = content.imageOffsetX ?? 0
-            const imgOffsetY = content.imageOffsetY ?? 0
-            drawImageCover(ctx, img, dx, dy, dw, dh, imgZoom, imgOffsetX, imgOffsetY)
-
-            ctx.restore()
+            imageCache.set(slot.id, img)
             resolveImg()
           }
           img.onerror = () => resolveImg()
           img.src = content.imageUrl!
         })
-        imagePromises.push(promise)
+        loadPromises.push(promise)
       }
     }
 
-    Promise.all(imagePromises).then(() => {
+    Promise.all(loadPromises).then(() => {
+      // Draw ALL slots in template order (preserves intended layering)
+      for (const slot of template.slots) {
+        const content = store.getSlotContent(slot.id)
+
+        if (slot.type === 'text') {
+          const text = content?.text ?? slot.content ?? ''
+          drawSlotBorders(ctx, slot, scale, inkColor)
+          if (!text) continue
+
+          ctx.save()
+
+          const fontStyle = slot.fontStyle === 'italic' ? 'italic ' : ''
+          const fontWeight = slot.fontWeight || 'normal'
+          const fontSize = (slot.fontSize || 12) * scale
+          const fontFamily = slot.fontFamily || 'serif'
+          ctx.font = `${fontStyle}${fontWeight} ${fontSize}px ${fontFamily}`
+          ctx.fillStyle = inkColor
+          ctx.textBaseline = 'top'
+
+          const x = slot.x * scale
+          const y = slot.y * scale + (slot.borderTop ? 8 : 0)
+          const maxWidth = slot.w * scale
+          const lineHeightVal = (slot.lineHeight || 1.4) * fontSize
+
+          if (slot.textAlign === 'center') {
+            ctx.textAlign = 'center'
+            wrapText(
+              ctx,
+              text,
+              x + maxWidth / 2,
+              y,
+              maxWidth,
+              lineHeightVal,
+              slot.letterSpacing ? slot.letterSpacing * scale : 0,
+            )
+          } else if (slot.textAlign === 'right') {
+            ctx.textAlign = 'right'
+            wrapText(
+              ctx,
+              text,
+              x + maxWidth,
+              y,
+              maxWidth,
+              lineHeightVal,
+              slot.letterSpacing ? slot.letterSpacing * scale : 0,
+            )
+          } else {
+            ctx.textAlign = 'left'
+            wrapText(
+              ctx,
+              text,
+              x,
+              y,
+              maxWidth,
+              lineHeightVal,
+              slot.letterSpacing ? slot.letterSpacing * scale : 0,
+            )
+          }
+
+          ctx.restore()
+        } else if (slot.type === 'image') {
+          const img = imageCache.get(slot.id)
+          if (!img || !content?.imageUrl) continue
+
+          ctx.save()
+
+          const filterStyle = getFilterStyle(content.filter)
+          if (filterStyle !== 'none') {
+            ctx.filter = filterStyle
+          }
+
+          drawImageCover(
+            ctx,
+            img,
+            slot.x * scale,
+            slot.y * scale,
+            slot.w * scale,
+            slot.h * scale,
+            content.imageZoom ?? 1,
+            content.imageOffsetX ?? 0,
+            content.imageOffsetY ?? 0,
+            slot.w, // template-space slot width (matches CSS element size)
+            slot.h, // template-space slot height
+          )
+
+          ctx.restore()
+        }
+      }
+
       resolve(canvas)
     })
   })
@@ -149,7 +158,7 @@ function createRenderCanvas(): Promise<HTMLCanvasElement> {
 
 function drawSlotBorders(
   ctx: CanvasRenderingContext2D,
-  slot: any,
+  slot: TemplateSlot,
   scale: number,
   inkColor: string = '#1A1A1A',
 ) {
@@ -179,9 +188,11 @@ function drawImageCover(
   zoom: number = 1,
   offsetX: number = 0,
   offsetY: number = 0,
+  slotW: number = dw, // slot width in template/CSS pixels — NOT canvas pixels
+  slotH: number = dh, // slot height in template/CSS pixels
 ) {
   const imgRatio = img.naturalWidth / img.naturalHeight
-  const slotRatio = dw / dh
+  const slotRatio = dw / dh // same ratio as slotW/slotH regardless of renderScale
   let sx: number, sy: number, sw: number, sh: number
 
   if (imgRatio > slotRatio) {
@@ -198,18 +209,29 @@ function drawImageCover(
 
   // Apply zoom: shrink the source rect (shows less of the image = zoom in)
   if (zoom > 1) {
+    // Preserve initial cover-crop origin for clamping
+    const sx0 = sx
+    const sy0 = sy
+    const swFull = sw
+    const shFull = sh
+
     const newSw = sw / zoom
     const newSh = sh / zoom
     sx += (sw - newSw) / 2
     sy += (sh - newSh) / 2
-    // Apply offset (in source pixels)
-    const maxOffsetSrc = (sw - newSw) / 2
-    const offsetScale = maxOffsetSrc / ((50 * (zoom - 1)) / zoom) // match the UI maxOffset formula
-    sx -= offsetX * offsetScale
-    sy -= offsetY * offsetScale
-    // Clamp
-    sx = Math.max(0, Math.min(img.naturalWidth - newSw, sx))
-    sy = Math.max(0, Math.min(img.naturalHeight - newSh, sy))
+
+    // Correct offsetScale: 1 element-space pixel of pan = swFull/slotW source pixels.
+    // This exactly matches CSS transform: scale(zoom) translate(offsetX, offsetY)
+    // with transformOrigin: center center on a w-full h-full object-cover img.
+    const offsetScaleX = swFull / slotW
+    const offsetScaleY = shFull / slotH
+    sx -= offsetX * offsetScaleX
+    sy -= offsetY * offsetScaleY
+
+    // Clamp to the cover-crop region (mirrors CSS overflow:hidden + object-fit:cover)
+    sx = Math.max(sx0, Math.min(sx0 + swFull - newSw, sx))
+    sy = Math.max(sy0, Math.min(sy0 + shFull - newSh, sy))
+
     sw = newSw
     sh = newSh
   }

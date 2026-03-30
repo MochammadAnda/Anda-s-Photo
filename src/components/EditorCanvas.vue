@@ -138,9 +138,14 @@ function onImageMouseMove(e: MouseEvent) {
   const zoom = content?.imageZoom ?? 1
   const dx = (e.clientX - dragStartX.value) / zoom
   const dy = (e.clientY - dragStartY.value) / zoom
-  const maxOffset = ((zoom - 1) * 50) / zoom
-  const newOx = Math.max(-maxOffset, Math.min(maxOffset, dragStartOffsetX.value + dx))
-  const newOy = Math.max(-maxOffset, Math.min(maxOffset, dragStartOffsetY.value + dy))
+  // Use actual slot dimensions so maxOffset matches the cover-crop pan range
+  const slot = template.value?.slots.find((s) => s.id === draggingSlotId.value)
+  const slotW = slot?.w ?? 100
+  const slotH = slot?.h ?? 100
+  const maxOffsetX = ((zoom - 1) * slotW) / 2 / zoom
+  const maxOffsetY = ((zoom - 1) * slotH) / 2 / zoom
+  const newOx = Math.max(-maxOffsetX, Math.min(maxOffsetX, dragStartOffsetX.value + dx))
+  const newOy = Math.max(-maxOffsetY, Math.min(maxOffsetY, dragStartOffsetY.value + dy))
   store.updateSlotImageTransform(draggingSlotId.value, zoom, newOx, newOy)
 }
 

@@ -7,6 +7,7 @@ export type PaperTextureId =
   | 'kraft'
   | 'parchment'
   | 'linen'
+  | 'ivory'
   | 'dark'
 
 export interface PaperTextureInfo {
@@ -98,6 +99,15 @@ export const PAPER_TEXTURES: PaperTextureInfo[] = [
     inkColor: '#1A1A1A',
     swatchStyle:
       'repeating-linear-gradient(0deg,#F5F0E6 0px,#F5F0E6 2px,#eae5d9 2px,#eae5d9 3px),repeating-linear-gradient(90deg,#F5F0E6 0px,#F5F0E6 2px,#eee9dd 2px,#eee9dd 3px)',
+  },
+  {
+    id: 'ivory',
+    name: 'Ivory',
+    icon: '🤍',
+    description: 'Warm ivory tone inspired by vintage portrait studio',
+    background: '#F5F0E8',
+    inkColor: '#2C1E10',
+    swatchStyle: 'linear-gradient(160deg, #F5F0E8 0%, #EDE5D4 50%, #E4DACA 100%)',
   },
   {
     id: 'dark',
@@ -252,6 +262,20 @@ export function getPaperOverlayStyle(id: PaperTextureId): Record<string, string>
         mixBlendMode: 'multiply',
         opacity: '0.45',
       }
+    case 'ivory':
+      return {
+        backgroundImage: [
+          // Very soft warm vignette
+          'radial-gradient(ellipse at 50% 50%,transparent 40%,rgba(80,50,20,0.06) 80%,rgba(50,30,10,0.12) 100%)',
+          // Subtle warm tint gradient
+          'linear-gradient(180deg,rgba(200,170,120,0.03) 0%,transparent 30%,transparent 70%,rgba(180,150,100,0.04) 100%)',
+          // Fine grain
+          GRAIN_FINE,
+        ].join(','),
+        backgroundSize: 'auto, auto, 512px 512px',
+        mixBlendMode: 'multiply',
+        opacity: '0.4',
+      }
     case 'dark':
       return {
         backgroundImage: GRAIN_FINE,
@@ -403,6 +427,24 @@ export function applyCanvasTexture(
       }
       ctx.restore()
       _addGrain(ctx, width, height, 6)
+      break
+    }
+    case 'ivory': {
+      ctx.save()
+      const ivoryVignette = ctx.createRadialGradient(
+        width / 2,
+        height / 2,
+        height * 0.35,
+        width / 2,
+        height / 2,
+        height * 0.8,
+      )
+      ivoryVignette.addColorStop(0, 'rgba(0,0,0,0)')
+      ivoryVignette.addColorStop(1, 'rgba(60,40,15,0.08)')
+      ctx.fillStyle = ivoryVignette
+      ctx.fillRect(0, 0, width, height)
+      ctx.restore()
+      _addGrain(ctx, width, height, 5)
       break
     }
     case 'dark':
