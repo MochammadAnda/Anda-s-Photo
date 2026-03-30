@@ -18,7 +18,7 @@ function startCreating() {
     >
       <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         <div class="font-[UnifrakturMaguntia] text-2xl text-[var(--color-ink)]">
-          The Daily Photo
+          The Anda's Photo
         </div>
         <button
           @click="startCreating"
@@ -50,7 +50,7 @@ function startCreating() {
         <h1
           class="font-[UnifrakturMaguntia] text-6xl md:text-8xl lg:text-9xl text-[var(--color-ink)] mb-6 leading-tight"
         >
-          The Daily Photo
+          The Anda's Photo
         </h1>
 
         <!-- Divider -->
@@ -372,7 +372,7 @@ function startCreating() {
     <!-- Footer -->
     <footer class="py-12 bg-[var(--color-ink)] text-[var(--color-cream)]">
       <div class="max-w-6xl mx-auto px-6 text-center">
-        <div class="font-[UnifrakturMaguntia] text-3xl mb-4">The Daily Photo</div>
+        <div class="font-[UnifrakturMaguntia] text-3xl mb-4">The Anda's Photo</div>
         <div class="h-px w-24 bg-[var(--color-cream)]/20 mx-auto mb-4"></div>
         <p class="font-[Inter] text-sm tracking-widest uppercase text-[var(--color-cream)]/60">
           © 2026 — Crafted with care · All rights reserved
