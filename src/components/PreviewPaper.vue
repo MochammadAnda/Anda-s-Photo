@@ -33,11 +33,12 @@ function getFilterStyle(slotId: string): string {
 function getImageTransformStyle(slotId: string) {
   const content = store.getSlotContent(slotId)
   const zoom = content?.imageZoom ?? 1
-  const ox = content?.imageOffsetX ?? 0
-  const oy = content?.imageOffsetY ?? 0
+  const ox = content?.imageOffsetX ?? 50
+  const oy = content?.imageOffsetY ?? 50
   return {
-    transform: `scale(${zoom}) translate(${ox}px, ${oy}px)`,
+    transform: zoom !== 1 ? `scale(${zoom})` : undefined,
     transformOrigin: 'center center',
+    objectPosition: `${ox}% ${oy}%`,
   }
 }
 

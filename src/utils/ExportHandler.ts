@@ -141,10 +141,8 @@ function createRenderCanvas(): Promise<HTMLCanvasElement> {
             slot.w * scale,
             slot.h * scale,
             content.imageZoom ?? 1,
-            content.imageOffsetX ?? 0,
-            content.imageOffsetY ?? 0,
-            slot.w, // template-space slot width (matches CSS element size)
-            slot.h, // template-space slot height
+            content.imageOffsetX ?? 50,
+            content.imageOffsetY ?? 50,
           )
 
           ctx.restore()
@@ -186,54 +184,37 @@ function drawImageCover(
   dw: number,
   dh: number,
   zoom: number = 1,
-  offsetX: number = 0,
-  offsetY: number = 0,
-  slotW: number = dw, // slot width in template/CSS pixels — NOT canvas pixels
-  slotH: number = dh, // slot height in template/CSS pixels
+  offsetX: number = 50,
+  offsetY: number = 50,
 ) {
   const imgRatio = img.naturalWidth / img.naturalHeight
-  const slotRatio = dw / dh // same ratio as slotW/slotH regardless of renderScale
+  const slotRatio = dw / dh
   let sx: number, sy: number, sw: number, sh: number
 
   if (imgRatio > slotRatio) {
     sh = img.naturalHeight
     sw = sh * slotRatio
-    sx = (img.naturalWidth - sw) / 2
-    sy = 0
+    sx = (img.naturalWidth - sw) * (offsetX / 100)
+    sy = (img.naturalHeight - sh) * (offsetY / 100)
   } else {
     sw = img.naturalWidth
     sh = sw / slotRatio
-    sx = 0
-    sy = (img.naturalHeight - sh) / 2
+    sx = (img.naturalWidth - sw) * (offsetX / 100)
+    sy = (img.naturalHeight - sh) * (offsetY / 100)
   }
 
-  // Apply zoom: shrink the source rect (shows less of the image = zoom in)
+  // Apply zoom: shrink the source rect centered on current view
   if (zoom > 1) {
-    // Preserve initial cover-crop origin for clamping
-    const sx0 = sx
-    const sy0 = sy
-    const swFull = sw
-    const shFull = sh
-
     const newSw = sw / zoom
     const newSh = sh / zoom
     sx += (sw - newSw) / 2
     sy += (sh - newSh) / 2
-
-    // Correct offsetScale: 1 element-space pixel of pan = swFull/slotW source pixels.
-    // This exactly matches CSS transform: scale(zoom) translate(offsetX, offsetY)
-    // with transformOrigin: center center on a w-full h-full object-cover img.
-    const offsetScaleX = swFull / slotW
-    const offsetScaleY = shFull / slotH
-    sx -= offsetX * offsetScaleX
-    sy -= offsetY * offsetScaleY
-
-    // Clamp to the cover-crop region (mirrors CSS overflow:hidden + object-fit:cover)
-    sx = Math.max(sx0, Math.min(sx0 + swFull - newSw, sx))
-    sy = Math.max(sy0, Math.min(sy0 + shFull - newSh, sy))
-
     sw = newSw
     sh = newSh
+
+    // Clamp to image bounds
+    sx = Math.max(0, Math.min(img.naturalWidth - sw, sx))
+    sy = Math.max(0, Math.min(img.naturalHeight - sh, sy))
   }
 
   ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh)

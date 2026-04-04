@@ -92,11 +92,12 @@ function onSlotFileSelected(e: Event) {
 function getImageTransformStyle(slotId: string) {
   const content = store.getSlotContent(slotId)
   const zoom = content?.imageZoom ?? 1
-  const ox = content?.imageOffsetX ?? 0
-  const oy = content?.imageOffsetY ?? 0
+  const ox = content?.imageOffsetX ?? 50
+  const oy = content?.imageOffsetY ?? 50
   return {
-    transform: `scale(${zoom}) translate(${ox}px, ${oy}px)`,
+    transform: zoom !== 1 ? `scale(${zoom})` : undefined,
     transformOrigin: 'center center',
+    objectPosition: `${ox}% ${oy}%`,
   }
 }
 
@@ -116,18 +117,18 @@ function onZoomChange(slotId: string, value: number) {
 }
 
 function onResetTransform(slotId: string) {
-  store.updateSlotImageTransform(slotId, 1, 0, 0)
+  store.updateSlotImageTransform(slotId, 1, 50, 50)
 }
 
 function onImageMouseDown(e: MouseEvent, slotId: string) {
   const content = store.getSlotContent(slotId)
-  if (!content || (content.imageZoom ?? 1) <= 1) return
+  if (!content) return
   e.preventDefault()
   draggingSlotId.value = slotId
   dragStartX.value = e.clientX
   dragStartY.value = e.clientY
-  dragStartOffsetX.value = content.imageOffsetX ?? 0
-  dragStartOffsetY.value = content.imageOffsetY ?? 0
+  dragStartOffsetX.value = content.imageOffsetX ?? 50
+  dragStartOffsetY.value = content.imageOffsetY ?? 50
   window.addEventListener('mousemove', onImageMouseMove)
   window.addEventListener('mouseup', onImageMouseUp)
 }
@@ -136,16 +137,14 @@ function onImageMouseMove(e: MouseEvent) {
   if (!draggingSlotId.value) return
   const content = store.getSlotContent(draggingSlotId.value)
   const zoom = content?.imageZoom ?? 1
-  const dx = (e.clientX - dragStartX.value) / zoom
-  const dy = (e.clientY - dragStartY.value) / zoom
-  // Use actual slot dimensions so maxOffset matches the cover-crop pan range
   const slot = template.value?.slots.find((s) => s.id === draggingSlotId.value)
   const slotW = slot?.w ?? 100
   const slotH = slot?.h ?? 100
-  const maxOffsetX = ((zoom - 1) * slotW) / 2 / zoom
-  const maxOffsetY = ((zoom - 1) * slotH) / 2 / zoom
-  const newOx = Math.max(-maxOffsetX, Math.min(maxOffsetX, dragStartOffsetX.value + dx))
-  const newOy = Math.max(-maxOffsetY, Math.min(maxOffsetY, dragStartOffsetY.value + dy))
+  const canvasZoom = store.zoomLevel
+  const dx = -(e.clientX - dragStartX.value) / (slotW * canvasZoom) * 100 / zoom
+  const dy = -(e.clientY - dragStartY.value) / (slotH * canvasZoom) * 100 / zoom
+  const newOx = Math.max(0, Math.min(100, dragStartOffsetX.value + dx))
+  const newOy = Math.max(0, Math.min(100, dragStartOffsetY.value + dy))
   store.updateSlotImageTransform(draggingSlotId.value, zoom, newOx, newOy)
 }
 
@@ -153,6 +152,44 @@ function onImageMouseUp() {
   draggingSlotId.value = null
   window.removeEventListener('mousemove', onImageMouseMove)
   window.removeEventListener('mouseup', onImageMouseUp)
+}
+
+function onImageTouchStart(e: TouchEvent, slotId: string) {
+  if (e.touches.length !== 1) return
+  const touch = e.touches[0]!
+  const content = store.getSlotContent(slotId)
+  if (!content) return
+  e.preventDefault()
+  draggingSlotId.value = slotId
+  dragStartX.value = touch.clientX
+  dragStartY.value = touch.clientY
+  dragStartOffsetX.value = content.imageOffsetX ?? 50
+  dragStartOffsetY.value = content.imageOffsetY ?? 50
+  window.addEventListener('touchmove', onImageTouchMove, { passive: false })
+  window.addEventListener('touchend', onImageTouchEnd)
+}
+
+function onImageTouchMove(e: TouchEvent) {
+  if (!draggingSlotId.value || e.touches.length !== 1) return
+  e.preventDefault()
+  const touch = e.touches[0]!
+  const content = store.getSlotContent(draggingSlotId.value)
+  const zoom = content?.imageZoom ?? 1
+  const slot = template.value?.slots.find((s) => s.id === draggingSlotId.value)
+  const slotW = slot?.w ?? 100
+  const slotH = slot?.h ?? 100
+  const canvasZoom = store.zoomLevel
+  const dx = -(touch.clientX - dragStartX.value) / (slotW * canvasZoom) * 100 / zoom
+  const dy = -(touch.clientY - dragStartY.value) / (slotH * canvasZoom) * 100 / zoom
+  const newOx = Math.max(0, Math.min(100, dragStartOffsetX.value + dx))
+  const newOy = Math.max(0, Math.min(100, dragStartOffsetY.value + dy))
+  store.updateSlotImageTransform(draggingSlotId.value, zoom, newOx, newOy)
+}
+
+function onImageTouchEnd() {
+  draggingSlotId.value = null
+  window.removeEventListener('touchmove', onImageTouchMove)
+  window.removeEventListener('touchend', onImageTouchEnd)
 }
 </script>
 
@@ -220,11 +257,12 @@ function onImageMouseUp() {
             :alt="slot.placeholder"
             class="w-full h-full object-cover"
             :class="{
-              'cursor-grab': (store.getSlotContent(slot.id)?.imageZoom ?? 1) > 1,
+              'cursor-grab': draggingSlotId !== slot.id,
               'cursor-grabbing': draggingSlotId === slot.id,
             }"
             :style="{ filter: getFilterStyle(slot.id), ...getImageTransformStyle(slot.id) }"
             @mousedown="onImageMouseDown($event, slot.id)"
+            @touchstart="onImageTouchStart($event, slot.id)"
             draggable="false"
           />
           <!-- Image controls toggle -->

@@ -102,6 +102,8 @@ export const useEditorStore = defineStore('editor', () => {
         imageUrl: url,
         photoId: id,
         filter: activeFilter.value,
+        imageOffsetX: 50,
+        imageOffsetY: 50,
       })
     } catch {
       console.warn(`Failed to process file ${file.name}`)
@@ -132,6 +134,8 @@ export const useEditorStore = defineStore('editor', () => {
       imageUrl: photo.url,
       photoId: photo.id,
       filter: activeFilter.value,
+      imageOffsetX: 50,
+      imageOffsetY: 50,
     })
   }
 
