@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="100%" height="100%">
+  <defs>
+    <linearGradient id="paperGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FBF8F1"/>
+      <stop offset="50%" stop-color="#F5EFE3"/>
+      <stop offset="100%" stop-color="#ECE2D0"/>
+    </linearGradient>
+    <linearGradient id="sepiaTint" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3D3024"/>
+      <stop offset="100%" stop-color="#1E1610"/>
+    </linearGradient>
+    <pattern id="hatch" width="6" height="6" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#C5B69F" stroke-width="0.8" opacity="0.35"/>
+    </pattern>
+    <pattern id="skyLines" width="100" height="4" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="2" x2="100" y2="2" stroke="#B8A890" stroke-width="0.6" stroke-dasharray="3 3" opacity="0.45"/>
+    </pattern>
+  </defs>
+
+  <!-- Background Paper -->
+  <rect width="800" height="600" fill="url(#paperGrad)"/>
+  <rect width="800" height="600" fill="url(#hatch)"/>
+  <rect x="25" y="25" width="750" height="490" fill="url(#skyLines)"/>
+
+  <!-- Vintage Double Border Frame -->
+  <rect x="18" y="18" width="764" height="564" fill="none" stroke="#2B2117" stroke-width="3"/>
+  <rect x="24" y="24" width="752" height="552" fill="none" stroke="#2B2117" stroke-width="1" stroke-dasharray="4 2"/>
+
+  <!-- Corner Ornaments -->
+  <g fill="#2B2117">
+    <circle cx="21" cy="21" r="4"/>
+    <circle cx="779" cy="21" r="4"/>
+    <circle cx="21" cy="579" r="4"/>
+    <circle cx="779" cy="579" r="4"/>
+  </g>
+
+  <!-- Graphic Elements -->
+  <g transform="translate(0, 0)">
+    
+    <rect x="40" y="390" width="720" height="100" fill="#D3DDC4" stroke="#2B2117" stroke-width="2"/>
+    <path d="M 280 490 L 360 390 L 440 390 L 520 490 Z" fill="#E2D4BF" stroke="#2B2117" stroke-width="1.5"/>
+    <rect x="120" y="270" width="560" height="120" fill="#FAF5ED" stroke="#2B2117" stroke-width="3"/>
+    <polygon points="100,270 280,210 320,270" fill="#697565" stroke="#2B2117" stroke-width="2.5"/>
+    <polygon points="680,270 520,210 480,270" fill="#697565" stroke="#2B2117" stroke-width="2.5"/>
+    <rect x="330" y="170" width="140" height="100" fill="#F4EBDC" stroke="#2B2117" stroke-width="3"/>
+    <polygon points="310,170 340,130 460,130 490,170" fill="#4F5A4B" stroke="#2B2117" stroke-width="2.5"/>
+    <polygon points="340,130 365,100 435,100 460,130" fill="#4F5A4B" stroke="#2B2117" stroke-width="2.5"/>
+    <line x1="400" y1="100" x2="400" y2="35" stroke="#2B2117" stroke-width="3"/>
+    <ellipse cx="400" cy="45" rx="7" ry="3.5" fill="#C99738" stroke="#2B2117" stroke-width="1.5"/><ellipse cx="400" cy="54" rx="7" ry="3.5" fill="#C99738" stroke="#2B2117" stroke-width="1.5"/><ellipse cx="400" cy="63" rx="7" ry="3.5" fill="#C99738" stroke="#2B2117" stroke-width="1.5"/><ellipse cx="400" cy="72" rx="7" ry="3.5" fill="#C99738" stroke="#2B2117" stroke-width="1.5"/><ellipse cx="400" cy="81" rx="7" ry="3.5" fill="#C99738" stroke="#2B2117" stroke-width="1.5"/><ellipse cx="400" cy="90" rx="7" ry="3.5" fill="#C99738" stroke="#2B2117" stroke-width="1.5"/>
+    <g fill="#FAF5ED" stroke="#2B2117" stroke-width="1.5">
+      
+        <path d="M 150 340 L 150 310 A 12 12 0 0 1 174 310 L 174 340 Z"/>
+      
+        <path d="M 186 340 L 186 310 A 12 12 0 0 1 210 310 L 210 340 Z"/>
+      
+        <path d="M 222 340 L 222 310 A 12 12 0 0 1 246 310 L 246 340 Z"/>
+      
+        <path d="M 258 340 L 258 310 A 12 12 0 0 1 282 310 L 282 340 Z"/>
+      
+        <path d="M 294 340 L 294 310 A 12 12 0 0 1 318 310 L 318 340 Z"/>
+      
+        <path d="M 330 340 L 330 310 A 12 12 0 0 1 354 310 L 354 340 Z"/>
+      
+        <path d="M 366 340 L 366 310 A 12 12 0 0 1 390 310 L 390 340 Z"/>
+      
+        <path d="M 402 340 L 402 310 A 12 12 0 0 1 426 310 L 426 340 Z"/>
+      
+        <path d="M 438 340 L 438 310 A 12 12 0 0 1 462 310 L 462 340 Z"/>
+      
+      
+        <path d="M 490 340 L 490 310 A 8 8 0 0 1 506 310 L 506 340 Z"/>
+      
+        <path d="M 510 340 L 510 310 A 8 8 0 0 1 526 310 L 526 340 Z"/>
+      
+        <path d="M 530 340 L 530 310 A 8 8 0 0 1 546 310 L 546 340 Z"/>
+      
+        <path d="M 550 340 L 550 310 A 8 8 0 0 1 566 310 L 566 340 Z"/>
+      
+        <path d="M 570 340 L 570 310 A 8 8 0 0 1 586 310 L 586 340 Z"/>
+      
+        <path d="M 590 340 L 590 310 A 8 8 0 0 1 606 310 L 606 340 Z"/>
+      
+        <path d="M 610 340 L 610 310 A 8 8 0 0 1 626 310 L 626 340 Z"/>
+      
+        <path d="M 630 340 L 630 310 A 8 8 0 0 1 646 310 L 646 340 Z"/>
+      
+        <path d="M 650 340 L 650 310 A 8 8 0 0 1 666 310 L 666 340 Z"/>
+      
+    </g>
+    <circle cx="400" cy="215" r="14" fill="#FAF5ED" stroke="#2B2117" stroke-width="2"/>
+    <line x1="400" y1="215" x2="400" y2="207" stroke="#2B2117" stroke-width="1.5"/>
+    <line x1="400" y1="215" x2="407" y2="215" stroke="#2B2117" stroke-width="1.5"/>
+    
+  </g>
+
+  <!-- Bottom Label Ribbon / Plaque -->
+  <g transform="translate(400, 554)">
+    <rect x="-240" y="-18" width="480" height="36" fill="#F4EDE0" stroke="#2B2117" stroke-width="2"/>
+    <rect x="-234" y="-14" width="468" height="28" fill="none" stroke="#7A6652" stroke-width="0.8"/>
+    <!-- Left / Right Ribbon Notches -->
+    <polygon points="-240,-18 -252,0 -240,18" fill="#ECE2D0" stroke="#2B2117" stroke-width="1.5"/>
+    <polygon points="240,-18 252,0 240,18" fill="#ECE2D0" stroke="#2B2117" stroke-width="1.5"/>
+    
+    <text x="0" y="-1" text-anchor="middle" font-family="'Playfair Display', Georgia, serif" font-size="15" font-weight="900" letter-spacing="3" fill="#1E1610">
+      GEDUNG SATE
+    </text>
+    <text x="0" y="11" text-anchor="middle" font-family="'Inter', sans-serif" font-size="8.5" font-weight="600" letter-spacing="2" fill="#7A6652">
+      BANDUNG · KANTOR GOUVERNEUR GENERAAL 1920
+    </text>
+  </g>
+</svg>

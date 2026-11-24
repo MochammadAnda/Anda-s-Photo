@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useEditorStore } from '@/stores/editor'
 import type { TemplateSlot } from '@/templates/newspaper-templates'
 import { getTextureById, getPaperOverlayStyle } from '@/utils/paper-textures'
+import { VINTAGE_STAMPS } from '@/utils/stamps'
 
 const store = useEditorStore()
 
@@ -21,6 +22,13 @@ const dragStartOffsetY = ref(0)
 // Active image controls
 const activeImageSlot = ref<string | null>(null)
 
+// Stamp drag state
+const draggingStampId = ref<string | null>(null)
+const stampDragStartX = ref(0)
+const stampDragStartY = ref(0)
+const stampOrigX = ref(0)
+const stampOrigY = ref(0)
+
 const template = computed(() => store.selectedTemplate)
 const currentTexture = computed(() => getTextureById(store.paperTexture))
 
@@ -34,8 +42,38 @@ function getFilterStyle(slotId: string): string {
       return 'sepia(80%) contrast(1.1)'
     case 'vintage':
       return 'sepia(40%) contrast(1.1) brightness(0.95) saturate(0.8)'
+    case 'noir':
+      return 'grayscale(100%) contrast(1.45) brightness(0.92)'
+    case 'halftone':
+      return 'grayscale(100%) contrast(1.7) brightness(1.05)'
+    case 'warm':
+      return 'sepia(55%) contrast(1.15) brightness(0.9) saturate(0.85)'
     default:
       return ''
+  }
+}
+
+function getPhotoBorderStyle(slotId: string) {
+  const content = store.getSlotContent(slotId)
+  const border = content?.photoBorder || store.activePhotoBorder || 'hairline'
+  switch (border) {
+    case 'hairline':
+      return {
+        border: '1px solid var(--color-ink)',
+      }
+    case 'double':
+      return {
+        border: '3px double var(--color-ink)',
+      }
+    case 'album':
+      return {
+        border: '5px solid #FAF8F3',
+        outline: '1px solid var(--color-ink)',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.18)',
+      }
+    case 'none':
+    default:
+      return {}
   }
 }
 
@@ -88,14 +126,22 @@ function onSlotFileSelected(e: Event) {
   targetSlotId.value = null
 }
 
-// Image zoom/pan controls
+// Image zoom/pan/rotate controls
 function getImageTransformStyle(slotId: string) {
   const content = store.getSlotContent(slotId)
   const zoom = content?.imageZoom ?? 1
   const ox = content?.imageOffsetX ?? 50
   const oy = content?.imageOffsetY ?? 50
+  const rot = content?.imageRotation ?? 0
+  const flip = content?.imageFlipH ? -1 : 1
+
+  const transforms: string[] = []
+  if (zoom !== 1) transforms.push(`scale(${zoom})`)
+  if (rot !== 0) transforms.push(`rotate(${rot}deg)`)
+  if (flip !== 1) transforms.push(`scaleX(${flip})`)
+
   return {
-    transform: zoom !== 1 ? `scale(${zoom})` : undefined,
+    transform: transforms.length > 0 ? transforms.join(' ') : undefined,
     transformOrigin: 'center center',
     objectPosition: `${ox}% ${oy}%`,
   }
@@ -111,13 +157,20 @@ function getSlotZoom(slotId: string): number {
 
 function onZoomChange(slotId: string, value: number) {
   const content = store.getSlotContent(slotId)
-  const ox = content?.imageOffsetX ?? 0
-  const oy = content?.imageOffsetY ?? 0
+  const ox = content?.imageOffsetX ?? 50
+  const oy = content?.imageOffsetY ?? 50
   store.updateSlotImageTransform(slotId, value, ox, oy)
 }
 
 function onResetTransform(slotId: string) {
-  store.updateSlotImageTransform(slotId, 1, 50, 50)
+  const content = store.getSlotContent(slotId)
+  if (content && content.type === 'image') {
+    content.imageZoom = 1
+    content.imageOffsetX = 50
+    content.imageOffsetY = 50
+    content.imageRotation = 0
+    content.imageFlipH = false
+  }
 }
 
 function onImageMouseDown(e: MouseEvent, slotId: string) {
@@ -141,8 +194,8 @@ function onImageMouseMove(e: MouseEvent) {
   const slotW = slot?.w ?? 100
   const slotH = slot?.h ?? 100
   const canvasZoom = store.zoomLevel
-  const dx = -(e.clientX - dragStartX.value) / (slotW * canvasZoom) * 100 / zoom
-  const dy = -(e.clientY - dragStartY.value) / (slotH * canvasZoom) * 100 / zoom
+  const dx = ((-(e.clientX - dragStartX.value) / (slotW * canvasZoom)) * 100) / zoom
+  const dy = ((-(e.clientY - dragStartY.value) / (slotH * canvasZoom)) * 100) / zoom
   const newOx = Math.max(0, Math.min(100, dragStartOffsetX.value + dx))
   const newOy = Math.max(0, Math.min(100, dragStartOffsetY.value + dy))
   store.updateSlotImageTransform(draggingSlotId.value, zoom, newOx, newOy)
@@ -179,8 +232,8 @@ function onImageTouchMove(e: TouchEvent) {
   const slotW = slot?.w ?? 100
   const slotH = slot?.h ?? 100
   const canvasZoom = store.zoomLevel
-  const dx = -(touch.clientX - dragStartX.value) / (slotW * canvasZoom) * 100 / zoom
-  const dy = -(touch.clientY - dragStartY.value) / (slotH * canvasZoom) * 100 / zoom
+  const dx = ((-(touch.clientX - dragStartX.value) / (slotW * canvasZoom)) * 100) / zoom
+  const dy = ((-(touch.clientY - dragStartY.value) / (slotH * canvasZoom)) * 100) / zoom
   const newOx = Math.max(0, Math.min(100, dragStartOffsetX.value + dx))
   const newOy = Math.max(0, Math.min(100, dragStartOffsetY.value + dy))
   store.updateSlotImageTransform(draggingSlotId.value, zoom, newOx, newOy)
@@ -190,6 +243,77 @@ function onImageTouchEnd() {
   draggingSlotId.value = null
   window.removeEventListener('touchmove', onImageTouchMove)
   window.removeEventListener('touchend', onImageTouchEnd)
+}
+
+// Stamp Dragging
+function onStampMouseDown(e: MouseEvent, stampId: string) {
+  e.preventDefault()
+  e.stopPropagation()
+  draggingStampId.value = stampId
+  stampDragStartX.value = e.clientX
+  stampDragStartY.value = e.clientY
+  const s = store.activeStamps.find((st) => st.id === stampId)
+  stampOrigX.value = s?.x ?? 0
+  stampOrigY.value = s?.y ?? 0
+  window.addEventListener('mousemove', onStampMouseMove)
+  window.addEventListener('mouseup', onStampMouseUp)
+}
+
+function onStampMouseMove(e: MouseEvent) {
+  if (!draggingStampId.value) return
+  const zoom = store.zoomLevel
+  const dx = (e.clientX - stampDragStartX.value) / zoom
+  const dy = (e.clientY - stampDragStartY.value) / zoom
+  store.updateStampPosition(
+    draggingStampId.value,
+    Math.round(stampOrigX.value + dx),
+    Math.round(stampOrigY.value + dy),
+  )
+}
+
+function onStampMouseUp() {
+  draggingStampId.value = null
+  window.removeEventListener('mousemove', onStampMouseMove)
+  window.removeEventListener('mouseup', onStampMouseUp)
+}
+
+function onStampTouchStart(e: TouchEvent, stampId: string) {
+  if (e.touches.length !== 1) return
+  const touch = e.touches[0]!
+  e.preventDefault()
+  e.stopPropagation()
+  draggingStampId.value = stampId
+  stampDragStartX.value = touch.clientX
+  stampDragStartY.value = touch.clientY
+  const s = store.activeStamps.find((st) => st.id === stampId)
+  stampOrigX.value = s?.x ?? 0
+  stampOrigY.value = s?.y ?? 0
+  window.addEventListener('touchmove', onStampTouchMove, { passive: false })
+  window.addEventListener('touchend', onStampTouchEnd)
+}
+
+function onStampTouchMove(e: TouchEvent) {
+  if (!draggingStampId.value || e.touches.length !== 1) return
+  e.preventDefault()
+  const touch = e.touches[0]!
+  const zoom = store.zoomLevel
+  const dx = (touch.clientX - stampDragStartX.value) / zoom
+  const dy = (touch.clientY - stampDragStartY.value) / zoom
+  store.updateStampPosition(
+    draggingStampId.value,
+    Math.round(stampOrigX.value + dx),
+    Math.round(stampOrigY.value + dy),
+  )
+}
+
+function onStampTouchEnd() {
+  draggingStampId.value = null
+  window.removeEventListener('touchmove', onStampTouchMove)
+  window.removeEventListener('touchend', onStampTouchEnd)
+}
+
+function getStampDef(stampType: string) {
+  return VINTAGE_STAMPS.find((s) => s.id === stampType)
 }
 </script>
 
@@ -246,6 +370,7 @@ function onImageTouchEnd() {
           width: slot.w + 'px',
           height: slot.h + 'px',
           boxSizing: 'border-box',
+          ...(store.getSlotContent(slot.id)?.imageUrl ? getPhotoBorderStyle(slot.id) : {}),
         }"
         @drop="onSlotDrop($event, slot)"
         @dragover="onSlotDragOver"
@@ -255,7 +380,7 @@ function onImageTouchEnd() {
           <img
             :src="store.getSlotContent(slot.id)!.imageUrl"
             :alt="slot.placeholder"
-            class="w-full h-full object-cover"
+            class="w-full h-full object-cover select-none"
             :class="{
               'cursor-grab': draggingSlotId !== slot.id,
               'cursor-grabbing': draggingSlotId === slot.id,
@@ -265,14 +390,14 @@ function onImageTouchEnd() {
             @touchstart="onImageTouchStart($event, slot.id)"
             draggable="false"
           />
-          <!-- Image controls toggle -->
+          <!-- Image controls toggle button -->
           <button
             @click.stop="toggleImageControls(slot.id)"
-            class="absolute top-2 left-2 w-6 h-6 bg-black/60 text-white flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity z-30 rounded"
-            title="Adjust zoom & position"
+            class="absolute top-2 left-2 w-7 h-7 bg-black/70 hover:bg-black text-white flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity z-30 rounded shadow-sm cursor-pointer"
+            title="Atur Zoom, Posisi & Rotasi Foto"
           >
             <svg
-              class="w-3.5 h-3.5"
+              class="w-4 h-4"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -283,80 +408,123 @@ function onImageTouchEnd() {
               <path d="M11 8v6M8 11h6" />
             </svg>
           </button>
-          <!-- Zoom/Pan controls panel -->
+
+          <!-- Zoom/Pan/Rotate controls panel -->
           <div
             v-if="activeImageSlot === slot.id"
-            class="absolute bottom-0 left-0 right-0 bg-black/75 backdrop-blur-sm p-2 z-30 flex items-center gap-2"
+            class="absolute bottom-0 left-0 right-0 bg-black/85 backdrop-blur-md p-2.5 z-30 flex flex-wrap items-center gap-2 text-white border-t border-white/20"
             @click.stop
           >
-            <svg
-              class="w-3 h-3 text-white/60 shrink-0"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
+            <!-- Zoom slider -->
+            <div class="flex items-center gap-1.5 flex-1 min-w-[130px]">
+              <span class="text-[9px] font-[Inter] tracking-wider uppercase opacity-75">Zoom:</span>
+              <input
+                type="range"
+                min="1"
+                max="3"
+                step="0.05"
+                :value="getSlotZoom(slot.id)"
+                @input="onZoomChange(slot.id, parseFloat(($event.target as HTMLInputElement).value))"
+                class="flex-1 h-1 accent-white cursor-pointer"
+              />
+              <span class="text-[10px] font-[Inter] w-7 text-right"
+                >{{ Math.round(getSlotZoom(slot.id) * 100) }}%</span
+              >
+            </div>
+
+            <!-- Rotate 90° button -->
+            <button
+              @click.stop="store.rotateSlotImage(slot.id, 90)"
+              class="px-2 py-1 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-[Inter] tracking-wider uppercase flex items-center gap-1 transition-colors cursor-pointer"
+              title="Putar foto 90 derajat searah jarum jam"
             >
-              <circle cx="11" cy="11" r="7" />
-              <path d="M8 11h6" />
-            </svg>
-            <input
-              type="range"
-              min="1"
-              max="3"
-              step="0.05"
-              :value="getSlotZoom(slot.id)"
-              @input="onZoomChange(slot.id, parseFloat(($event.target as HTMLInputElement).value))"
-              class="flex-1 h-1 accent-white cursor-pointer"
-            />
-            <svg
-              class="w-3 h-3 text-white/60 shrink-0"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
+              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+              </svg>
+              90°
+            </button>
+
+            <!-- Flip Horizontal button -->
+            <button
+              @click.stop="store.flipSlotImage(slot.id)"
+              class="px-2 py-1 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-[Inter] tracking-wider uppercase flex items-center gap-1 transition-colors cursor-pointer"
+              title="Cermin horizontal (flip)"
             >
-              <circle cx="11" cy="11" r="7" />
-              <path d="M11 8v6M8 11h6" />
-            </svg>
-            <span class="text-white text-[10px] font-[Inter] w-8 text-center shrink-0"
-              >{{ Math.round(getSlotZoom(slot.id) * 100) }}%</span
-            >
+              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m8 3 4 8 5-5 5 15H2L8 3z" />
+              </svg>
+              Cermin
+            </button>
+
+            <!-- Reset button -->
             <button
               @click.stop="onResetTransform(slot.id)"
-              class="text-white/70 hover:text-white text-[10px] font-[Inter] tracking-wider uppercase shrink-0"
+              class="text-white/70 hover:text-white text-[10px] font-[Inter] tracking-wider uppercase px-1 transition-colors cursor-pointer"
             >
               Reset
             </button>
           </div>
+
           <!-- Remove button -->
           <button
             @click="removeImage(slot.id)"
-            class="absolute top-2 right-2 w-6 h-6 bg-red-800/80 text-white flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity z-30"
+            class="absolute top-2 right-2 w-7 h-7 bg-red-800/80 hover:bg-red-800 text-white flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity z-30 rounded cursor-pointer"
+            title="Hapus foto dari slot"
           >
             ✕
           </button>
         </template>
+
         <!-- Empty placeholder -->
         <template v-else>
           <div
-            class="w-full h-full border-2 border-dashed border-[var(--color-ink)]/20 bg-[var(--color-ink)]/[0.03] flex flex-col items-center justify-center gap-2 text-[var(--color-ink)]/30 hover:border-[var(--color-ink)]/40 hover:bg-[var(--color-ink)]/[0.06] transition-all cursor-pointer"
+            class="w-full h-full border-2 border-dashed border-[var(--color-ink)]/20 bg-[var(--color-ink)]/[0.03] flex flex-col items-center justify-center p-2 text-center text-[var(--color-ink)]/40 hover:border-[var(--color-ink)]/40 hover:bg-[var(--color-ink)]/[0.06] transition-all"
             @click="onSlotClick(slot.id)"
           >
             <svg
-              class="w-8 h-8"
+              class="w-6 h-6 mb-1 text-[var(--color-ink)]/30 shrink-0"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              stroke-width="1"
+              stroke-width="1.2"
             >
               <rect x="3" y="3" width="18" height="18" rx="2" />
               <circle cx="8.5" cy="8.5" r="1.5" />
               <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
             </svg>
-            <span class="text-xs font-[Inter] tracking-wider uppercase">{{
-              slot.placeholder
-            }}</span>
-            <span class="text-[10px] font-[Inter]">Click or drop photo here</span>
+            <span class="text-[11px] font-[Inter] font-medium tracking-wider uppercase text-[var(--color-ink)]/70 mb-2 truncate max-w-[90%]">
+              {{ slot.placeholder }}
+            </span>
+
+            <!-- Quick Action Buttons -->
+            <div class="flex flex-wrap items-center justify-center gap-1.5 z-10">
+              <button
+                type="button"
+                @click.stop="store.openCamera(slot.id)"
+                class="px-2 py-1 bg-[var(--color-ink)] text-[var(--color-cream)] hover:bg-[var(--color-ink-light)] text-[9px] font-[Inter] tracking-wider uppercase transition-colors flex items-center gap-1 shadow-xs cursor-pointer"
+                title="Ambil foto langsung dengan kamera"
+              >
+                <svg class="w-3 h-3 text-[var(--color-gold)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
+                Kamera
+              </button>
+
+              <button
+                type="button"
+                @click.stop="onSlotClick(slot.id)"
+                class="px-2 py-1 border border-[var(--color-ink)]/30 bg-[var(--color-paper)] text-[var(--color-ink)] hover:border-[var(--color-ink)] text-[9px] font-[Inter] tracking-wider uppercase transition-colors flex items-center gap-1 cursor-pointer"
+                title="Upload foto dari folder atau galeri"
+              >
+                <svg class="w-3 h-3 text-[var(--color-ink-light)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 16V4m0 0L8 8m4-4l4 4" />
+                  <path d="M2 17l.621 2.485A2 2 0 0 0 4.561 21h14.878a2 2 0 0 0 1.94-1.515L22 17" />
+                </svg>
+                Upload
+              </button>
+            </div>
+            <span class="text-[8px] font-[Inter] text-[var(--color-ink)]/40 mt-1">atau geser foto ke sini</span>
           </div>
         </template>
       </div>
@@ -379,17 +547,22 @@ function onImageTouchEnd() {
           letterSpacing: slot.letterSpacing ? slot.letterSpacing + 'px' : undefined,
           lineHeight: slot.lineHeight || 1.4,
           textTransform: (slot.textTransform as any) || 'none',
-          borderTop: slot.borderTop ? '1px solid var(--color-ink)' : undefined,
-          borderBottom: slot.borderBottom ? '1px solid var(--color-ink)' : undefined,
+          backgroundColor: slot.backgroundColor || undefined,
+          color: slot.color || undefined,
+          border: slot.border || undefined,
+          borderTop: slot.border ? undefined : (slot.borderTop ? '1px solid var(--color-ink)' : undefined),
+          borderBottom: slot.border ? undefined : (slot.borderBottom ? '1px solid var(--color-ink)' : undefined),
+          borderLeft: slot.border ? undefined : (typeof slot.borderLeft === 'string' ? slot.borderLeft : (slot.borderLeft ? '3px solid var(--color-ink)' : undefined)),
+          borderRight: slot.border ? undefined : (typeof slot.borderRight === 'string' ? slot.borderRight : (slot.borderRight ? '3px solid var(--color-ink)' : undefined)),
+          padding: slot.padding || (slot.borderTop || slot.borderBottom ? '4px 0' : '0'),
           display: 'flex',
-          alignItems: slot.borderTop && slot.borderBottom ? 'center' : 'flex-start',
+          alignItems: slot.borderTop && slot.borderBottom && !slot.padding ? 'center' : 'flex-start',
           justifyContent:
             slot.textAlign === 'center'
               ? 'center'
               : slot.textAlign === 'right'
                 ? 'flex-end'
                 : 'flex-start',
-          padding: slot.borderTop || slot.borderBottom ? '4px 0' : '0',
         }"
         @dblclick="startEditText(slot)"
       >
@@ -428,5 +601,116 @@ function onImageTouchEnd() {
         </div>
       </div>
     </template>
+
+    <!-- DRAGGABLE VINTAGE STAMPS LAYER (Poin 3) -->
+    <div
+      v-for="st in store.activeStamps"
+      :key="st.id"
+      class="absolute select-none cursor-move group z-[20]"
+      :style="{
+        left: st.x + 'px',
+        top: st.y + 'px',
+        width: (getStampDef(st.stampType)?.width ?? 120) + 'px',
+        height: (getStampDef(st.stampType)?.height ?? 80) + 'px',
+        transform: `rotate(${st.rotation}deg) scale(${st.scale || 1})`,
+        transformOrigin: 'center center',
+      }"
+      @mousedown="onStampMouseDown($event, st.id)"
+      @touchstart="onStampTouchStart($event, st.id)"
+    >
+      <!-- Stamp Visuals: Special Edition -->
+      <div
+        v-if="st.stampType === 'special-edition'"
+        class="w-full h-full border-[3px] border-[#8B1E1E] p-1 flex flex-col items-center justify-center text-center opacity-90 shadow-xs"
+        style="outline: 1px dashed #8B1E1E; outline-offset: -5px;"
+      >
+        <span class="font-[Inter] text-[9px] font-bold tracking-wider text-[#8B1E1E] uppercase leading-none">★ SPECIAL EDITION ★</span>
+        <span class="font-[Playfair_Display] text-[16px] font-black tracking-widest text-[#8B1E1E] uppercase leading-tight my-0.5">EDISI KHUSUS</span>
+        <span class="font-[Cinzel] text-[8px] font-bold tracking-wider text-[#8B1E1E] uppercase leading-none">TERBIT RESMI NUSANTARA</span>
+      </div>
+
+      <!-- Stamp Visuals: Postmark Round -->
+      <div
+        v-else-if="st.stampType === 'postmark-round'"
+        class="w-full h-full rounded-full border-[3px] border-[#1E293B] p-1 flex flex-col items-center justify-center text-center opacity-85"
+        style="outline: 1px solid #1E293B; outline-offset: -5px;"
+      >
+        <span class="font-[Cinzel] text-[8px] font-bold tracking-widest text-[#1E293B] uppercase">POSTKANTOOR</span>
+        <span class="font-[Playfair_Display] text-[15px] font-black tracking-wider text-[#1E293B] my-0.5">1945</span>
+        <span class="font-[Inter] text-[7.5px] font-semibold tracking-wider text-[#1E293B] uppercase">DJAKARTA · LUNAS</span>
+      </div>
+
+      <!-- Stamp Visuals: Official Archive -->
+      <div
+        v-else-if="st.stampType === 'official-archive'"
+        class="w-full h-full border-[2.5px] border-[#8B1E1E] p-1.5 flex flex-col items-center justify-center text-center opacity-90"
+        style="outline: 1px solid #8B1E1E; outline-offset: -3px;"
+      >
+        <span class="font-[Cinzel] text-[11px] font-bold tracking-widest text-[#8B1E1E] uppercase leading-tight">ARSIP PUSAKA RESMI</span>
+        <span class="font-[Libre_Baskerville] text-[8px] italic text-[#8B1E1E] leading-none mt-1">DOCUMENT ARCHIVES · NO. 1928</span>
+      </div>
+
+      <!-- Stamp Visuals: Verified Heritage -->
+      <div
+        v-else-if="st.stampType === 'verified-heritage'"
+        class="w-full h-full border-[2.5px] border-[#065F46] p-1 flex flex-col items-center justify-center text-center opacity-90"
+        style="clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%); background: rgba(6, 95, 70, 0.05);"
+      >
+        <span class="font-[Cinzel] text-[8px] font-bold tracking-wider text-[#065F46] uppercase leading-none">AUTHENTIC</span>
+        <span class="font-[Cinzel] text-[10px] font-black tracking-widest text-[#065F46] uppercase leading-tight my-0.5">HERITAGE</span>
+        <span class="font-[Inter] text-[7px] font-bold text-[#065F46] uppercase leading-none">★ 100% ORIGINAL ★</span>
+      </div>
+
+      <!-- Stamp Visuals: Congratulations -->
+      <div
+        v-else-if="st.stampType === 'congratulations'"
+        class="w-full h-full rounded-full border-[2.5px] border-[#92400E] p-1 flex flex-col items-center justify-center text-center opacity-90"
+        style="outline: 1px dashed #92400E; outline-offset: -4px;"
+      >
+        <span class="font-[Cinzel] text-[7.5px] font-bold tracking-wider text-[#92400E] uppercase">CONGRATULATIONS</span>
+        <span class="font-[Playfair_Display] text-[12px] font-black tracking-wider text-[#92400E] my-0.5 leading-none">SELAMAT</span>
+        <span class="font-[Cinzel] text-[9.5px] font-bold tracking-wider text-[#92400E] leading-none">& SUKSES</span>
+        <span class="font-[Libre_Baskerville] text-[7.5px] italic text-[#92400E] mt-0.5">★ CUM LAUDE ★</span>
+      </div>
+
+      <!-- Stamp Visuals: Love Eternal -->
+      <div
+        v-else-if="st.stampType === 'love-eternal'"
+        class="w-full h-full border-[2.5px] border-[#9F1239] p-1 flex flex-col items-center justify-center text-center opacity-90"
+        style="outline: 1px solid #9F1239; outline-offset: -3px;"
+      >
+        <span class="font-[Cinzel] text-[8px] font-bold tracking-wider text-[#9F1239] uppercase leading-none">♥ IKATAN JANJI SUCI ♥</span>
+        <span class="font-[Playfair_Display] text-[14px] font-black italic tracking-wide text-[#9F1239] my-0.5 leading-tight">Eternal Love</span>
+        <span class="font-[Inter] text-[7.5px] font-bold tracking-wider text-[#9F1239] uppercase leading-none">SELAMANYA BERSAMA</span>
+      </div>
+
+      <!-- Stamp Controls on Hover -->
+      <div
+        class="absolute -top-3.5 -right-3.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-30"
+        @click.stop
+      >
+        <button
+          @click.stop="store.updateStampRotation(st.id, st.rotation - 15)"
+          class="w-5 h-5 bg-black/80 hover:bg-black text-white text-[10px] rounded-full flex items-center justify-center cursor-pointer shadow-xs"
+          title="Putar berlawanan jarum jam"
+        >
+          ↺
+        </button>
+        <button
+          @click.stop="store.updateStampRotation(st.id, st.rotation + 15)"
+          class="w-5 h-5 bg-black/80 hover:bg-black text-white text-[10px] rounded-full flex items-center justify-center cursor-pointer shadow-xs"
+          title="Putar searah jarum jam"
+        >
+          ↻
+        </button>
+        <button
+          @click.stop="store.removeStamp(st.id)"
+          class="w-5 h-5 bg-red-700 hover:bg-red-800 text-white text-[10px] rounded-full flex items-center justify-center font-bold cursor-pointer shadow-xs"
+          title="Hapus stempel"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
   </div>
 </template>

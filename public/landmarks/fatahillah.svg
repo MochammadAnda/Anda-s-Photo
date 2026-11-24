@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="100%" height="100%">
+  <defs>
+    <linearGradient id="paperGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FBF8F1"/>
+      <stop offset="50%" stop-color="#F5EFE3"/>
+      <stop offset="100%" stop-color="#ECE2D0"/>
+    </linearGradient>
+    <linearGradient id="sepiaTint" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3D3024"/>
+      <stop offset="100%" stop-color="#1E1610"/>
+    </linearGradient>
+    <pattern id="hatch" width="6" height="6" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#C5B69F" stroke-width="0.8" opacity="0.35"/>
+    </pattern>
+    <pattern id="skyLines" width="100" height="4" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="2" x2="100" y2="2" stroke="#B8A890" stroke-width="0.6" stroke-dasharray="3 3" opacity="0.45"/>
+    </pattern>
+  </defs>
+
+  <!-- Background Paper -->
+  <rect width="800" height="600" fill="url(#paperGrad)"/>
+  <rect width="800" height="600" fill="url(#hatch)"/>
+  <rect x="25" y="25" width="750" height="490" fill="url(#skyLines)"/>
+
+  <!-- Vintage Double Border Frame -->
+  <rect x="18" y="18" width="764" height="564" fill="none" stroke="#2B2117" stroke-width="3"/>
+  <rect x="24" y="24" width="752" height="552" fill="none" stroke="#2B2117" stroke-width="1" stroke-dasharray="4 2"/>
+
+  <!-- Corner Ornaments -->
+  <g fill="#2B2117">
+    <circle cx="21" cy="21" r="4"/>
+    <circle cx="779" cy="21" r="4"/>
+    <circle cx="21" cy="579" r="4"/>
+    <circle cx="779" cy="579" r="4"/>
+  </g>
+
+  <!-- Graphic Elements -->
+  <g transform="translate(0, 0)">
+    
+    <rect x="40" y="400" width="720" height="90" fill="#DDD1BE" stroke="#2B2117" stroke-width="2"/>
+    <line x1="60" y1="400" x2="40" y2="490" stroke="#B8A78F" stroke-width="1"/><line x1="106" y1="400" x2="88" y2="490" stroke="#B8A78F" stroke-width="1"/><line x1="152" y1="400" x2="136" y2="490" stroke="#B8A78F" stroke-width="1"/><line x1="198" y1="400" x2="184" y2="490" stroke="#B8A78F" stroke-width="1"/><line x1="244" y1="400" x2="232" y2="490" stroke="#B8A78F" stroke-width="1"/><line x1="290" y1="400" x2="280" y2="490" stroke="#B8A78F" stroke-width="1"/><line x1="336" y1="400" x2="328" y2="490" stroke="#B8A78F" stroke-width="1"/><line x1="382" y1="400" x2="376" y2="490" stroke="#B8A78F" stroke-width="1"/><line x1="428" y1="400" x2="424" y2="490" stroke="#B8A78F" stroke-width="1"/><line x1="474" y1="400" x2="472" y2="490" stroke="#B8A78F" stroke-width="1"/><line x1="520" y1="400" x2="520" y2="490" stroke="#B8A78F" stroke-width="1"/><line x1="566" y1="400" x2="568" y2="490" stroke="#B8A78F" stroke-width="1"/><line x1="612" y1="400" x2="616" y2="490" stroke="#B8A78F" stroke-width="1"/><line x1="658" y1="400" x2="664" y2="490" stroke="#B8A78F" stroke-width="1"/><line x1="704" y1="400" x2="712" y2="490" stroke="#B8A78F" stroke-width="1"/>
+    <rect x="150" y="240" width="500" height="160" fill="#FAF4EA" stroke="#2B2117" stroke-width="3"/>
+    <rect x="330" y="210" width="140" height="190" fill="#F5ECE0" stroke="#2B2117" stroke-width="3"/>
+    <polygon points="320,210 400,150 480,210" fill="#E8DEC8" stroke="#2B2117" stroke-width="3"/>
+    <circle cx="400" cy="185" r="14" fill="#FAF4EA" stroke="#2B2117" stroke-width="2"/>
+    <rect x="375" y="100" width="50" height="50" fill="#FAF4EA" stroke="#2B2117" stroke-width="2.5"/>
+    <polygon points="370,100 400,55 430,100" fill="#586754" stroke="#2B2117" stroke-width="2.5"/>
+    <line x1="400" y1="55" x2="400" y2="35" stroke="#2B2117" stroke-width="2"/>
+    <polygon points="400,38 418,41 400,44" fill="#C99738" stroke="#2B2117" stroke-width="1"/>
+    <path d="M 375 400 L 375 340 A 25 25 0 0 1 425 340 L 425 400 Z" fill="#4A3423" stroke="#2B2117" stroke-width="2.5"/>
+    <polygon points="310,400 350,370 450,370 490,400" fill="#E2D4BE" stroke="#2B2117" stroke-width="2"/>
+    <g fill="#3D2E20" stroke="#2B2117" stroke-width="1.5">
+      <rect x="180" y="260" width="30" height="45" fill="#FAF4EA"/>
+      <rect x="230" y="260" width="30" height="45" fill="#FAF4EA"/>
+      <rect x="280" y="260" width="30" height="45" fill="#FAF4EA"/>
+      <rect x="180" y="330" width="30" height="50" fill="#FAF4EA"/>
+      <rect x="230" y="330" width="30" height="50" fill="#FAF4EA"/>
+      <rect x="280" y="330" width="30" height="50" fill="#FAF4EA"/>
+      <rect x="490" y="260" width="30" height="45" fill="#FAF4EA"/>
+      <rect x="540" y="260" width="30" height="45" fill="#FAF4EA"/>
+      <rect x="590" y="260" width="30" height="45" fill="#FAF4EA"/>
+      <rect x="490" y="330" width="30" height="50" fill="#FAF4EA"/>
+      <rect x="540" y="330" width="30" height="50" fill="#FAF4EA"/>
+      <rect x="590" y="330" width="30" height="50" fill="#FAF4EA"/>
+    </g>
+    <ellipse cx="620" cy="430" rx="35" ry="12" fill="#3D3833" stroke="#2B2117" stroke-width="2"/>
+    <circle cx="610" cy="442" r="14" fill="#6E563B" stroke="#2B2117" stroke-width="2"/>
+    
+  </g>
+
+  <!-- Bottom Label Ribbon / Plaque -->
+  <g transform="translate(400, 554)">
+    <rect x="-240" y="-18" width="480" height="36" fill="#F4EDE0" stroke="#2B2117" stroke-width="2"/>
+    <rect x="-234" y="-14" width="468" height="28" fill="none" stroke="#7A6652" stroke-width="0.8"/>
+    <!-- Left / Right Ribbon Notches -->
+    <polygon points="-240,-18 -252,0 -240,18" fill="#ECE2D0" stroke="#2B2117" stroke-width="1.5"/>
+    <polygon points="240,-18 252,0 240,18" fill="#ECE2D0" stroke="#2B2117" stroke-width="1.5"/>
+    
+    <text x="0" y="-1" text-anchor="middle" font-family="'Playfair Display', Georgia, serif" font-size="15" font-weight="900" letter-spacing="3" fill="#1E1610">
+      MUSEUM FATAHILLAH
+    </text>
+    <text x="0" y="11" text-anchor="middle" font-family="'Inter', sans-serif" font-size="8.5" font-weight="600" letter-spacing="2" fill="#7A6652">
+      BATAVIA · STADHUIS VAN BATAVIA 1710
+    </text>
+  </g>
+</svg>

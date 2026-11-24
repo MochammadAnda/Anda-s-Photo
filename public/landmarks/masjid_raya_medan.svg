@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="100%" height="100%">
+  <defs>
+    <linearGradient id="paperGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FBF8F1"/>
+      <stop offset="50%" stop-color="#F5EFE3"/>
+      <stop offset="100%" stop-color="#ECE2D0"/>
+    </linearGradient>
+    <linearGradient id="sepiaTint" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3D3024"/>
+      <stop offset="100%" stop-color="#1E1610"/>
+    </linearGradient>
+    <pattern id="hatch" width="6" height="6" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#C5B69F" stroke-width="0.8" opacity="0.35"/>
+    </pattern>
+    <pattern id="skyLines" width="100" height="4" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="2" x2="100" y2="2" stroke="#B8A890" stroke-width="0.6" stroke-dasharray="3 3" opacity="0.45"/>
+    </pattern>
+  </defs>
+
+  <!-- Background Paper -->
+  <rect width="800" height="600" fill="url(#paperGrad)"/>
+  <rect width="800" height="600" fill="url(#hatch)"/>
+  <rect x="25" y="25" width="750" height="490" fill="url(#skyLines)"/>
+
+  <!-- Vintage Double Border Frame -->
+  <rect x="18" y="18" width="764" height="564" fill="none" stroke="#2B2117" stroke-width="3"/>
+  <rect x="24" y="24" width="752" height="552" fill="none" stroke="#2B2117" stroke-width="1" stroke-dasharray="4 2"/>
+
+  <!-- Corner Ornaments -->
+  <g fill="#2B2117">
+    <circle cx="21" cy="21" r="4"/>
+    <circle cx="779" cy="21" r="4"/>
+    <circle cx="21" cy="579" r="4"/>
+    <circle cx="779" cy="579" r="4"/>
+  </g>
+
+  <!-- Graphic Elements -->
+  <g transform="translate(0, 0)">
+    
+    <rect x="40" y="400" width="720" height="90" fill="#E0D8CB" stroke="#2B2117" stroke-width="2"/>
+    <polygon points="220,400 180,320 220,240 580,240 620,320 580,400" fill="#FAF5ED" stroke="#2B2117" stroke-width="3"/>
+    <path d="M 310 160 C 310 60, 490 60, 490 160 Z" fill="#242322" stroke="#2B2117" stroke-width="3.5"/>
+    <line x1="400" y1="60" x2="400" y2="25" stroke="#C99738" stroke-width="3"/>
+    <path d="M 396 28 A 10 10 0 1 1 408 34 A 7 7 0 1 0 396 28 Z" fill="#C99738"/>
+    <path d="M 180 200 C 180 140, 260 140, 260 200 Z" fill="#242322" stroke="#2B2117" stroke-width="2"/>
+    <path d="M 540 200 C 540 140, 620 140, 620 200 Z" fill="#242322" stroke="#2B2117" stroke-width="2"/>
+    <g transform="translate(670, 100)">
+      <polygon points="-25,300 -18,0 18,0 25,300" fill="#FAF5ED" stroke="#2B2117" stroke-width="2.5"/>
+      <polygon points="-22,0 0,-30 22,0" fill="#242322" stroke="#2B2117" stroke-width="2"/>
+    </g>
+    <g fill="#2D4D47" stroke="#2B2117" stroke-width="2">
+      <path d="M 370 400 L 370 320 A 30 30 0 0 1 430 320 L 430 400 Z"/>
+      <path d="M 280 380 L 280 320 A 20 20 0 0 1 320 320 L 320 380 Z"/>
+      <path d="M 480 380 L 480 320 A 20 20 0 0 1 520 320 L 520 380 Z"/>
+    </g>
+    
+  </g>
+
+  <!-- Bottom Label Ribbon / Plaque -->
+  <g transform="translate(400, 554)">
+    <rect x="-240" y="-18" width="480" height="36" fill="#F4EDE0" stroke="#2B2117" stroke-width="2"/>
+    <rect x="-234" y="-14" width="468" height="28" fill="none" stroke="#7A6652" stroke-width="0.8"/>
+    <!-- Left / Right Ribbon Notches -->
+    <polygon points="-240,-18 -252,0 -240,18" fill="#ECE2D0" stroke="#2B2117" stroke-width="1.5"/>
+    <polygon points="240,-18 252,0 240,18" fill="#ECE2D0" stroke="#2B2117" stroke-width="1.5"/>
+    
+    <text x="0" y="-1" text-anchor="middle" font-family="'Playfair Display', Georgia, serif" font-size="15" font-weight="900" letter-spacing="3" fill="#1E1610">
+      MASJID RAYA AL-MASHUN
+    </text>
+    <text x="0" y="11" text-anchor="middle" font-family="'Inter', sans-serif" font-size="8.5" font-weight="600" letter-spacing="2" fill="#7A6652">
+      MEDAN DELI · KEMEGAHAN KUBAH HITAM SULTAN 1909
+    </text>
+  </g>
+</svg>

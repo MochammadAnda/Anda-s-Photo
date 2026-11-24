@@ -71,9 +71,9 @@ function startCreating() {
         <p
           class="font-[Lora] text-base text-[var(--color-accent)] max-w-2xl mx-auto mb-12 leading-relaxed"
         >
-          Transform your photographs into stunning vintage newspaper and editorial magazine layouts.
-          Choose from classic European templates, upload your photos, and generate print-ready
-          results.
+          Transformasikan foto Anda menjadi halaman koran vintage bernuansa landmark kota-kota besar di Indonesia.
+          Pilih dari edisi Batavia Jakarta, Bandung Priangan, Yogyakarta Mataram, Surabaya, hingga Medan Deli
+          dalam format A4 dan A3.
         </p>
 
         <!-- CTA -->
@@ -268,28 +268,28 @@ function startCreating() {
           <h2
             class="font-[Playfair_Display] text-4xl md:text-5xl font-bold text-[var(--color-ink)] mb-4"
           >
-            Classic Designs
+            Edisi Landmark Kota Indonesia
           </h2>
           <p class="font-[Lora] text-lg text-[var(--color-ink-light)] italic">
-            Inspired by the golden age of European print media
+            Terinspirasi dari pesona sejarah dan kekayaan ikonik kota-kota besar di Indonesia
           </p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
-          <!-- Newspaper -->
+          <!-- Jakarta -->
           <div class="text-center">
             <div
               class="bg-[var(--color-paper)] newspaper-border p-6 mb-4 hover:vintage-shadow transition-shadow duration-300"
             >
-              <div class="font-[UnifrakturMaguntia] text-xl mb-2">The Daily Chronicle</div>
+              <div class="font-[UnifrakturMaguntia] text-xl mb-2">Batavia Courant</div>
               <div class="newspaper-divider-thick mb-3"></div>
               <div class="font-[Playfair_Display] text-sm font-bold uppercase tracking-wider mb-2">
-                Breaking: Headlines Ahoy
+                Monas & Batavia Kota Tua
               </div>
               <div
                 class="w-full h-32 bg-[var(--color-cream-dark)] mb-2 flex items-center justify-center text-xs text-[var(--color-accent)]"
               >
-                Main Photo
+                Ikon Ibu Kota
               </div>
               <div class="grid grid-cols-3 gap-1 mb-2">
                 <div class="h-12 bg-[var(--color-cream-dark)]"></div>
@@ -297,15 +297,14 @@ function startCreating() {
                 <div class="h-12 bg-[var(--color-cream-dark)]"></div>
               </div>
               <div class="text-[7px] text-[var(--color-ink-light)] leading-relaxed">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum fringilla orci
-                vel.
+                Gelora metropolitan dan romantika sejarah Batavia tempo doeloe di jantung Indonesia.
               </div>
             </div>
-            <h3 class="font-[Playfair_Display] text-lg font-semibold">Classic Newspaper</h3>
-            <p class="text-sm text-[var(--color-accent)] font-[Inter]">A4 & A3 formats</p>
+            <h3 class="font-[Playfair_Display] text-lg font-semibold">Jakarta · Batavia</h3>
+            <p class="text-sm text-[var(--color-accent)] font-[Inter]">Format A4 & A3</p>
           </div>
 
-          <!-- Magazine -->
+          <!-- Bandung -->
           <div class="text-center">
             <div
               class="bg-white newspaper-border p-6 mb-4 hover:vintage-shadow transition-shadow duration-300"
@@ -313,47 +312,47 @@ function startCreating() {
               <div
                 class="w-full h-32 bg-[var(--color-ink)]/5 mb-3 flex items-center justify-center text-xs text-[var(--color-accent)]"
               >
-                Hero Photo
+                Gedung Sate & Braga
               </div>
-              <div class="font-[Playfair_Display] text-2xl italic mb-1">The Art of</div>
-              <div class="font-[Playfair_Display] text-2xl italic mb-2">Elegance</div>
+              <div class="font-[Playfair_Display] text-2xl italic mb-1">Preanger Bode</div>
+              <div class="font-[Playfair_Display] text-lg italic mb-2">Parijs van Java</div>
               <div class="text-[8px] tracking-widest uppercase text-[var(--color-accent)] mb-2">
-                Photography by Studio
+                Karya Estetika Art Deco
               </div>
               <div class="h-px w-8 bg-[var(--color-ink)]/30 mb-2"></div>
               <div class="text-[7px] text-[var(--color-ink-light)] leading-relaxed">
-                In the quiet elegance of everyday moments lies a beauty that defies description.
+                Keanggunan Gedung Sate dan romantisme trotoar Jalan Braga nan klasik.
               </div>
             </div>
-            <h3 class="font-[Playfair_Display] text-lg font-semibold">Magazine Editorial</h3>
-            <p class="text-sm text-[var(--color-accent)] font-[Inter]">A4 & A3 formats</p>
+            <h3 class="font-[Playfair_Display] text-lg font-semibold">Bandung · Priangan</h3>
+            <p class="text-sm text-[var(--color-accent)] font-[Inter]">Format A4 & A3</p>
           </div>
 
-          <!-- Minimal -->
+          <!-- Jogja -->
           <div class="text-center">
             <div
               class="bg-[var(--color-paper)] newspaper-border p-6 mb-4 hover:vintage-shadow transition-shadow duration-300"
             >
               <div class="text-[8px] tracking-[0.4em] uppercase text-[var(--color-accent)] mb-2">
-                ✦ Est. 2026 ✦
+                ✦ Sumbu Filosofis ✦
               </div>
               <div class="font-[Playfair_Display] text-xl font-bold tracking-[0.3em] mb-2">
-                PORTRAIT
+                WARTA MATARAM
               </div>
               <div class="h-px w-12 bg-[var(--color-ink)]/30 mx-auto mb-3"></div>
-              <div class="font-[Lora] italic text-xs mb-3">A Study in Light & Shadow</div>
+              <div class="font-[Lora] italic text-xs mb-3">Tugu Pal Putih & Keraton</div>
               <div
                 class="w-2/3 mx-auto h-32 bg-[var(--color-cream-dark)] mb-2 flex items-center justify-center text-xs text-[var(--color-accent)]"
               >
-                Your Photo
+                Kehangatan Malioboro
               </div>
               <div class="grid grid-cols-2 gap-1 w-2/3 mx-auto">
                 <div class="h-10 bg-[var(--color-cream-dark)]"></div>
                 <div class="h-10 bg-[var(--color-cream-dark)]"></div>
               </div>
             </div>
-            <h3 class="font-[Playfair_Display] text-lg font-semibold">Minimal Retro</h3>
-            <p class="text-sm text-[var(--color-accent)] font-[Inter]">A4 format</p>
+            <h3 class="font-[Playfair_Display] text-lg font-semibold">Yogyakarta · Mataram</h3>
+            <p class="text-sm text-[var(--color-accent)] font-[Inter]">Format A4 & A3</p>
           </div>
         </div>
 

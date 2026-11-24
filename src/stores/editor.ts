@@ -3,10 +3,14 @@ import { ref, computed } from 'vue'
 import {
   templates,
   type NewspaperTemplate,
-  type TemplateSlot,
 } from '@/templates/newspaper-templates'
 import { type PaperTextureId } from '@/utils/paper-textures'
 import { resizeImage } from '@/utils/image-resize'
+import type { CanvasStamp, StampType } from '@/utils/stamps'
+import { VINTAGE_STAMPS } from '@/utils/stamps'
+
+export type PhotoFilter = 'none' | 'grayscale' | 'sepia' | 'vintage' | 'noir' | 'halftone' | 'warm'
+export type PhotoBorderStyle = 'hairline' | 'double' | 'album' | 'none'
 
 export interface UploadedPhoto {
   id: string
@@ -21,23 +25,31 @@ export interface SlotContent {
   imageUrl?: string
   photoId?: string
   text?: string
-  filter?: 'none' | 'grayscale' | 'sepia' | 'vintage'
+  filter?: PhotoFilter
+  photoBorder?: PhotoBorderStyle
   imageZoom?: number
   imageOffsetX?: number
   imageOffsetY?: number
+  imageRotation?: number // 0, 90, 180, 270
+  imageFlipH?: boolean // horizontal flip
 }
 
 export const useEditorStore = defineStore('editor', () => {
   // State
   const selectedTemplate = ref<NewspaperTemplate | null>(null)
   const selectedPaperSize = ref<'A4' | 'A3'>('A4')
+  const selectedTheme = ref<string>('all')
   const photos = ref<UploadedPhoto[]>([])
   const slotContents = ref<Map<string, SlotContent>>(new Map())
+  const activeStamps = ref<CanvasStamp[]>([])
   const currentStep = ref<'template' | 'editor' | 'preview'>('template')
-  const activeFilter = ref<'none' | 'grayscale' | 'sepia' | 'vintage'>('none')
+  const activeFilter = ref<PhotoFilter>('none')
+  const activePhotoBorder = ref<PhotoBorderStyle>('hairline')
   const paperTexture = ref<PaperTextureId>('plain')
   const showGrid = ref(false)
   const zoomLevel = ref(1)
+  const isCameraOpen = ref(false)
+  const cameraTargetSlotId = ref<string | null>(null)
 
   // Getters
   const imageSlots = computed(() => {
@@ -51,7 +63,12 @@ export const useEditorStore = defineStore('editor', () => {
   })
 
   const filteredTemplates = computed(() => {
-    return templates.filter((t) => t.paperSize === selectedPaperSize.value)
+    return templates.filter((t) => {
+      const matchSize = t.paperSize === selectedPaperSize.value
+      if (!matchSize) return false
+      if (selectedTheme.value === 'all') return true
+      return (t.theme ?? 'city') === selectedTheme.value
+    })
   })
 
   const allImageSlotsFilled = computed(() => {
@@ -63,6 +80,7 @@ export const useEditorStore = defineStore('editor', () => {
   function selectTemplate(template: NewspaperTemplate) {
     selectedTemplate.value = template
     slotContents.value = new Map()
+    activeStamps.value = []
     // Initialize text slots with default content
     template.slots.forEach((slot) => {
       if (slot.type === 'text' && slot.content) {
@@ -77,6 +95,10 @@ export const useEditorStore = defineStore('editor', () => {
 
   function setPaperSize(size: 'A4' | 'A3') {
     selectedPaperSize.value = size
+  }
+
+  function setThemeFilter(theme: string) {
+    selectedTheme.value = theme
   }
 
   async function addPhotos(files: File[]) {
@@ -102,8 +124,12 @@ export const useEditorStore = defineStore('editor', () => {
         imageUrl: url,
         photoId: id,
         filter: activeFilter.value,
+        photoBorder: activePhotoBorder.value,
+        imageZoom: 1,
         imageOffsetX: 50,
         imageOffsetY: 50,
+        imageRotation: 0,
+        imageFlipH: false,
       })
     } catch {
       console.warn(`Failed to process file ${file.name}`)
@@ -134,8 +160,12 @@ export const useEditorStore = defineStore('editor', () => {
       imageUrl: photo.url,
       photoId: photo.id,
       filter: activeFilter.value,
+      photoBorder: activePhotoBorder.value,
+      imageZoom: 1,
       imageOffsetX: 50,
       imageOffsetY: 50,
+      imageRotation: 0,
+      imageFlipH: false,
     })
   }
 
@@ -152,10 +182,29 @@ export const useEditorStore = defineStore('editor', () => {
     }
   }
 
-  function updateSlotFilter(slotId: string, filter: 'none' | 'grayscale' | 'sepia' | 'vintage') {
+  function updateSlotFilter(slotId: string, filter: PhotoFilter) {
     const existing = slotContents.value.get(slotId)
     if (existing && existing.type === 'image') {
       existing.filter = filter
+    }
+  }
+
+  function setPhotoBorder(border: PhotoBorderStyle) {
+    activePhotoBorder.value = border
+  }
+
+  function applyPhotoBorderToAll() {
+    for (const [, content] of slotContents.value) {
+      if (content.type === 'image') {
+        content.photoBorder = activePhotoBorder.value
+      }
+    }
+  }
+
+  function updateSlotPhotoBorder(slotId: string, border: PhotoBorderStyle) {
+    const existing = slotContents.value.get(slotId)
+    if (existing && existing.type === 'image') {
+      existing.photoBorder = border
     }
   }
 
@@ -171,6 +220,62 @@ export const useEditorStore = defineStore('editor', () => {
       existing.imageOffsetX = offsetX
       existing.imageOffsetY = offsetY
     }
+  }
+
+  function rotateSlotImage(slotId: string, deltaAngle: number = 90) {
+    const existing = slotContents.value.get(slotId)
+    if (existing && existing.type === 'image') {
+      const current = existing.imageRotation ?? 0
+      existing.imageRotation = (current + deltaAngle + 360) % 360
+    }
+  }
+
+  function flipSlotImage(slotId: string) {
+    const existing = slotContents.value.get(slotId)
+    if (existing && existing.type === 'image') {
+      existing.imageFlipH = !existing.imageFlipH
+    }
+  }
+
+  // Stamp actions
+  function addStamp(stampType: StampType, customX?: number, customY?: number) {
+    const stampDef = VINTAGE_STAMPS.find((s) => s.id === stampType)
+    const t = selectedTemplate.value
+    const defX = customX ?? (t ? t.width - 180 : 600)
+    const defY = customY ?? (t ? 50 : 50)
+    const id = `stamp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+
+    activeStamps.value.push({
+      id,
+      stampType,
+      x: defX,
+      y: defY,
+      rotation: stampDef?.defaultRotation ?? 0,
+      scale: 1,
+    })
+  }
+
+  function removeStamp(stampId: string) {
+    activeStamps.value = activeStamps.value.filter((s) => s.id !== stampId)
+  }
+
+  function updateStampPosition(stampId: string, x: number, y: number) {
+    const stamp = activeStamps.value.find((s) => s.id === stampId)
+    if (stamp) {
+      stamp.x = x
+      stamp.y = y
+    }
+  }
+
+  function updateStampRotation(stampId: string, rotation: number) {
+    const stamp = activeStamps.value.find((s) => s.id === stampId)
+    if (stamp) {
+      stamp.rotation = rotation
+    }
+  }
+
+  function clearStamps() {
+    activeStamps.value = []
   }
 
   function removeSlotContent(slotId: string) {
@@ -189,7 +294,7 @@ export const useEditorStore = defineStore('editor', () => {
     showGrid.value = !showGrid.value
   }
 
-  function setFilter(filter: 'none' | 'grayscale' | 'sepia' | 'vintage') {
+  function setFilter(filter: PhotoFilter) {
     activeFilter.value = filter
   }
 
@@ -197,13 +302,25 @@ export const useEditorStore = defineStore('editor', () => {
     paperTexture.value = id
   }
 
+  function openCamera(targetSlotId?: string) {
+    cameraTargetSlotId.value = targetSlotId ?? null
+    isCameraOpen.value = true
+  }
+
+  function closeCamera() {
+    isCameraOpen.value = false
+    cameraTargetSlotId.value = null
+  }
+
   function resetEditor() {
     selectedTemplate.value = null
     photos.value.forEach((p) => URL.revokeObjectURL(p.url))
     photos.value = []
     slotContents.value = new Map()
+    activeStamps.value = []
     currentStep.value = 'template'
     activeFilter.value = 'none'
+    activePhotoBorder.value = 'hairline'
     paperTexture.value = 'plain'
     showGrid.value = false
     zoomLevel.value = 1
@@ -230,13 +347,18 @@ export const useEditorStore = defineStore('editor', () => {
     // State
     selectedTemplate,
     selectedPaperSize,
+    selectedTheme,
     photos,
     slotContents,
+    activeStamps,
     currentStep,
     activeFilter,
+    activePhotoBorder,
     paperTexture,
     showGrid,
     zoomLevel,
+    isCameraOpen,
+    cameraTargetSlotId,
     // Getters
     imageSlots,
     textSlots,
@@ -245,11 +367,15 @@ export const useEditorStore = defineStore('editor', () => {
     // Actions
     selectTemplate,
     setPaperSize,
+    setThemeFilter,
     addPhotos,
     removePhoto,
     assignPhotoToSlot,
     updateSlotText,
     updateSlotFilter,
+    setPhotoBorder,
+    applyPhotoBorderToAll,
+    updateSlotPhotoBorder,
     removeSlotContent,
     setStep,
     setZoom,
@@ -261,5 +387,14 @@ export const useEditorStore = defineStore('editor', () => {
     autoAssignPhotos,
     addPhotoToSlot,
     updateSlotImageTransform,
+    rotateSlotImage,
+    flipSlotImage,
+    addStamp,
+    removeStamp,
+    updateStampPosition,
+    updateStampRotation,
+    clearStamps,
+    openCamera,
+    closeCamera,
   }
 })

@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="100%" height="100%">
+  <defs>
+    <linearGradient id="paperGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FBF8F1"/>
+      <stop offset="50%" stop-color="#F5EFE3"/>
+      <stop offset="100%" stop-color="#ECE2D0"/>
+    </linearGradient>
+    <linearGradient id="sepiaTint" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3D3024"/>
+      <stop offset="100%" stop-color="#1E1610"/>
+    </linearGradient>
+    <pattern id="hatch" width="6" height="6" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#C5B69F" stroke-width="0.8" opacity="0.35"/>
+    </pattern>
+    <pattern id="skyLines" width="100" height="4" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="2" x2="100" y2="2" stroke="#B8A890" stroke-width="0.6" stroke-dasharray="3 3" opacity="0.45"/>
+    </pattern>
+  </defs>
+
+  <!-- Background Paper -->
+  <rect width="800" height="600" fill="url(#paperGrad)"/>
+  <rect width="800" height="600" fill="url(#hatch)"/>
+  <rect x="25" y="25" width="750" height="490" fill="url(#skyLines)"/>
+
+  <!-- Vintage Double Border Frame -->
+  <rect x="18" y="18" width="764" height="564" fill="none" stroke="#2B2117" stroke-width="3"/>
+  <rect x="24" y="24" width="752" height="552" fill="none" stroke="#2B2117" stroke-width="1" stroke-dasharray="4 2"/>
+
+  <!-- Corner Ornaments -->
+  <g fill="#2B2117">
+    <circle cx="21" cy="21" r="4"/>
+    <circle cx="779" cy="21" r="4"/>
+    <circle cx="21" cy="579" r="4"/>
+    <circle cx="779" cy="579" r="4"/>
+  </g>
+
+  <!-- Graphic Elements -->
+  <g transform="translate(0, 0)">
+    
+    <polygon points="40,490 280,330 520,330 760,490" fill="#C4B9A7" stroke="#2B2117" stroke-width="2"/>
+    <line x1="400" y1="330" x2="400" y2="490" stroke="#7A6652" stroke-width="1.5" stroke-dasharray="4 6"/>
+    <polygon points="60,450 60,180 280,240 280,330" fill="#FAF4EA" stroke="#2B2117" stroke-width="3"/>
+    <rect x="75" y="320" width="180" height="70" fill="#ECE0CE" stroke="#2B2117" stroke-width="2"/>
+    <text x="160" y="305" font-family="'Playfair Display', serif" font-size="12" font-weight="900" fill="#2B2117" letter-spacing="3">BRAGA</text>
+    <polygon points="740,450 740,160 520,230 520,330" fill="#F4EBDC" stroke="#2B2117" stroke-width="3"/>
+    <rect x="540" y="310" width="180" height="70" fill="#E2D4BE" stroke="#2B2117" stroke-width="2"/>
+    <g transform="translate(260, 260)">
+      <line x1="0" y1="120" x2="0" y2="0" stroke="#2B2117" stroke-width="4"/>
+      <path d="M 0 20 Q -25 0 -25 -20" fill="none" stroke="#2B2117" stroke-width="2.5"/>
+      <path d="M 0 20 Q 25 0 25 -20" fill="none" stroke="#2B2117" stroke-width="2.5"/>
+      <polygon points="-32,-20 -18,-20 -20,-40 -30,-40" fill="#F7E6A1" stroke="#2B2117" stroke-width="1.5"/>
+      <polygon points="18,-20 32,-20 30,-40 20,-40" fill="#F7E6A1" stroke="#2B2117" stroke-width="1.5"/>
+    </g>
+    <g transform="translate(560, 360)">
+      <line x1="0" y1="70" x2="0" y2="0" stroke="#2B2117" stroke-width="3"/>
+      <rect x="-35" y="-18" width="70" height="18" fill="#22422C" stroke="#FAF4EA" stroke-width="1.5"/>
+      <text x="0" y="-5" text-anchor="middle" font-family="'Inter', sans-serif" font-size="8" font-weight="bold" fill="#FAF4EA">JL. BRAGA</text>
+    </g>
+    
+  </g>
+
+  <!-- Bottom Label Ribbon / Plaque -->
+  <g transform="translate(400, 554)">
+    <rect x="-240" y="-18" width="480" height="36" fill="#F4EDE0" stroke="#2B2117" stroke-width="2"/>
+    <rect x="-234" y="-14" width="468" height="28" fill="none" stroke="#7A6652" stroke-width="0.8"/>
+    <!-- Left / Right Ribbon Notches -->
+    <polygon points="-240,-18 -252,0 -240,18" fill="#ECE2D0" stroke="#2B2117" stroke-width="1.5"/>
+    <polygon points="240,-18 252,0 240,18" fill="#ECE2D0" stroke="#2B2117" stroke-width="1.5"/>
+    
+    <text x="0" y="-1" text-anchor="middle" font-family="'Playfair Display', Georgia, serif" font-size="15" font-weight="900" letter-spacing="3" fill="#1E1610">
+      JALAN BRAGA
+    </text>
+    <text x="0" y="11" text-anchor="middle" font-family="'Inter', sans-serif" font-size="8.5" font-weight="600" letter-spacing="2" fill="#7A6652">
+      BANDUNG · PARIJS VAN JAVA ART DECO 1930
+    </text>
+  </g>
+</svg>

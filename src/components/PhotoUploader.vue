@@ -51,43 +51,70 @@ function handleFiles(fileList: FileList) {
 
 <template>
   <div class="space-y-4">
-    <h3 class="font-[Playfair_Display] text-lg font-semibold text-[var(--color-ink)]">Photos</h3>
+    <div class="flex items-center justify-between">
+      <h3 class="font-[Playfair_Display] text-lg font-semibold text-[var(--color-ink)]">Photos</h3>
+      <span class="text-[10px] font-[Inter] text-[var(--color-accent)] tracking-wider uppercase">
+        Ambil / Upload
+      </span>
+    </div>
 
-    <!-- Drop Zone -->
-    <div
-      @drop.prevent="onDrop"
-      @dragover="onDragOver"
-      @dragleave="onDragLeave"
-      @click="triggerFileInput"
-      :class="[
-        'border-2 border-dashed rounded-sm p-6 text-center cursor-pointer transition-all duration-200',
-        isDragging
-          ? 'border-[var(--color-ink)] bg-[var(--color-ink)]/5'
-          : 'border-[var(--color-ink)]/30 hover:border-[var(--color-ink)]/60 hover:bg-[var(--color-ink)]/5',
-      ]"
-    >
-      <input
-        ref="fileInput"
-        type="file"
-        multiple
-        accept="image/*"
-        class="hidden"
-        @change="onFileSelected"
-      />
-      <svg
-        class="w-8 h-8 mx-auto mb-2 text-[var(--color-ink)]/40"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.5"
+    <!-- Actions: Camera & Upload -->
+    <div class="space-y-2">
+      <!-- Direct Camera Button -->
+      <button
+        type="button"
+        @click="store.openCamera()"
+        class="w-full py-2.5 px-4 bg-[var(--color-ink)] text-[var(--color-cream)] hover:bg-[var(--color-ink-light)] border border-[var(--color-ink)] transition-all font-[Playfair_Display] text-xs tracking-wider uppercase flex items-center justify-center gap-2 group shadow-sm active:translate-y-0.5 cursor-pointer"
       >
-        <path d="M12 16V4m0 0L8 8m4-4l4 4" />
-        <path d="M2 17l.621 2.485A2 2 0 0 0 4.561 21h14.878a2 2 0 0 0 1.94-1.515L22 17" />
-      </svg>
-      <p class="font-[Inter] text-sm text-[var(--color-ink-light)]">
-        <span class="font-medium text-[var(--color-ink)]">Click to upload</span> or drag & drop
-      </p>
-      <p class="font-[Inter] text-xs text-[var(--color-ink)]/40 mt-1">PNG, JPG, WEBP</p>
+        <svg
+          class="w-4 h-4 text-[var(--color-gold)] group-hover:scale-110 transition-transform"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+          <circle cx="12" cy="13" r="4" />
+        </svg>
+        Ambil Foto Langsung
+      </button>
+
+      <!-- Drop Zone / Upload from Files -->
+      <div
+        @drop.prevent="onDrop"
+        @dragover="onDragOver"
+        @dragleave="onDragLeave"
+        @click="triggerFileInput"
+        :class="[
+          'border-2 border-dashed rounded-sm p-5 text-center cursor-pointer transition-all duration-200',
+          isDragging
+            ? 'border-[var(--color-ink)] bg-[var(--color-ink)]/5'
+            : 'border-[var(--color-ink)]/30 hover:border-[var(--color-ink)]/60 hover:bg-[var(--color-ink)]/5',
+        ]"
+      >
+        <input
+          ref="fileInput"
+          type="file"
+          multiple
+          accept="image/*"
+          class="hidden"
+          @change="onFileSelected"
+        />
+        <svg
+          class="w-6 h-6 mx-auto mb-1.5 text-[var(--color-ink)]/40"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+        >
+          <path d="M12 16V4m0 0L8 8m4-4l4 4" />
+          <path d="M2 17l.621 2.485A2 2 0 0 0 4.561 21h14.878a2 2 0 0 0 1.94-1.515L22 17" />
+        </svg>
+        <p class="font-[Inter] text-xs text-[var(--color-ink-light)]">
+          <span class="font-medium text-[var(--color-ink)]">Pilih dari folder/galeri</span> atau drag & drop
+        </p>
+        <p class="font-[Inter] text-[10px] text-[var(--color-ink)]/40 mt-0.5">PNG, JPG, WEBP</p>
+      </div>
     </div>
 
     <!-- Photo Thumbnails -->

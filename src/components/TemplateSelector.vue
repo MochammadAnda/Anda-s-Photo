@@ -4,6 +4,15 @@ import { type NewspaperTemplate } from '@/templates/newspaper-templates'
 
 const store = useEditorStore()
 
+const themes = [
+  { id: 'all', label: 'Semua Tema' },
+  { id: 'city', label: '🏛️ Kota Bersejarah' },
+  { id: 'wedding', label: '💍 Pernikahan' },
+  { id: 'graduation', label: '🎓 Wisuda' },
+  { id: 'birthday', label: '🎂 Ulang Tahun' },
+  { id: 'travel', label: '🧭 Petualangan' },
+]
+
 function selectTemplate(template: NewspaperTemplate) {
   store.selectTemplate(template)
   store.setStep('editor')
@@ -12,20 +21,21 @@ function selectTemplate(template: NewspaperTemplate) {
 
 <template>
   <div class="py-8">
-    <!-- Paper Size Selector -->
-    <div class="text-center mb-10">
+    <!-- Paper Size & Theme Selector -->
+    <div class="text-center mb-8">
       <h2 class="font-[Playfair_Display] text-3xl font-bold text-[var(--color-ink)] mb-2">
-        Choose Your Template
+        Pilih Template Koran Klasik
       </h2>
       <p class="font-[Lora] text-base text-[var(--color-ink-light)] italic mb-6">
-        Select a paper size, then pick your layout
+        Tersedia pilihan edisi kota-kota bersejarah dan momen spesial (pernikahan, wisuda, milad, ekspedisi)
       </p>
 
-      <div class="inline-flex border-2 border-[var(--color-ink)]">
+      <!-- Paper Size Buttons -->
+      <div class="inline-flex border-2 border-[var(--color-ink)] mb-6">
         <button
           @click="store.setPaperSize('A4')"
           :class="[
-            'px-8 py-3 font-[Playfair_Display] text-sm tracking-widest uppercase transition-colors duration-200',
+            'px-8 py-3 font-[Playfair_Display] text-sm tracking-widest uppercase transition-colors duration-200 cursor-pointer',
             store.selectedPaperSize === 'A4'
               ? 'bg-[var(--color-ink)] text-[var(--color-cream)]'
               : 'bg-transparent text-[var(--color-ink)] hover:bg-[var(--color-ink)]/10',
@@ -36,13 +46,30 @@ function selectTemplate(template: NewspaperTemplate) {
         <button
           @click="store.setPaperSize('A3')"
           :class="[
-            'px-8 py-3 font-[Playfair_Display] text-sm tracking-widest uppercase border-l-2 border-[var(--color-ink)] transition-colors duration-200',
+            'px-8 py-3 font-[Playfair_Display] text-sm tracking-widest uppercase border-l-2 border-[var(--color-ink)] transition-colors duration-200 cursor-pointer',
             store.selectedPaperSize === 'A3'
               ? 'bg-[var(--color-ink)] text-[var(--color-cream)]'
               : 'bg-transparent text-[var(--color-ink)] hover:bg-[var(--color-ink)]/10',
           ]"
         >
           A3 — 297×420mm
+        </button>
+      </div>
+
+      <!-- Theme Filter Pills -->
+      <div class="flex flex-wrap items-center justify-center gap-2 max-w-3xl mx-auto px-4">
+        <button
+          v-for="t in themes"
+          :key="t.id"
+          @click="store.setThemeFilter(t.id)"
+          :class="[
+            'px-4 py-1.5 text-xs font-[Inter] tracking-wider uppercase border transition-all cursor-pointer rounded-full',
+            store.selectedTheme === t.id
+              ? 'bg-[var(--color-ink)] text-[var(--color-cream)] border-[var(--color-ink)] font-semibold shadow-xs'
+              : 'bg-transparent text-[var(--color-ink)] border-[var(--color-ink)]/20 hover:border-[var(--color-ink)]/60',
+          ]"
+        >
+          {{ t.label }}
         </button>
       </div>
     </div>
@@ -98,50 +125,61 @@ function selectTemplate(template: NewspaperTemplate) {
                     width: (slot.w / template.width) * 100 + '%',
                     height: (slot.h / template.height) * 100 + '%',
                     fontFamily: slot.fontFamily || 'inherit',
-                    fontSize: Math.max(4, (slot.fontSize || 12) * 0.35) + 'px',
+                    fontSize: Math.max(4, (slot.fontSize || 10) * 0.28) + 'px',
                     fontWeight: slot.fontWeight || 'normal',
-                    fontStyle: slot.fontStyle || 'normal',
                     textAlign: (slot.textAlign as any) || 'left',
-                    letterSpacing: slot.letterSpacing ? slot.letterSpacing * 0.3 + 'px' : undefined,
-                    lineHeight: slot.lineHeight || 1.4,
-                    textTransform: (slot.textTransform as any) || 'none',
-                    borderTop: slot.borderTop ? '1px solid rgba(0,0,0,0.15)' : undefined,
-                    borderBottom: slot.borderBottom ? '1px solid rgba(0,0,0,0.15)' : undefined,
+                    lineHeight: '1.2',
+                    color: 'var(--color-ink)',
+                    opacity: 0.6,
+                    borderBottom: slot.borderBottom ? '1px solid var(--color-ink)' : undefined,
+                    borderTop: slot.borderTop ? '1px solid var(--color-ink)' : undefined,
                   }"
                 >
-                  <span class="text-[var(--color-ink)]/60">{{ slot.content.slice(0, 40) }}</span>
+                  {{ slot.content.slice(0, 40) }}
                 </div>
               </template>
             </div>
 
             <!-- Hover overlay -->
             <div
-              class="absolute inset-0 bg-[var(--color-ink)]/0 group-hover:bg-[var(--color-ink)]/80 transition-all duration-300 flex items-center justify-center"
+              class="absolute inset-0 bg-[var(--color-ink)]/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"
             >
               <span
-                class="text-[var(--color-cream)] font-[Playfair_Display] text-lg tracking-widest uppercase opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                class="font-[Playfair_Display] text-sm text-[var(--color-cream)] tracking-widest uppercase border border-[var(--color-cream)] px-6 py-2"
               >
-                Use Template
+                Gunakan Template
               </span>
             </div>
           </div>
 
           <!-- Template Info -->
-          <div class="text-center">
-            <h3 class="font-[Playfair_Display] text-lg font-semibold text-[var(--color-ink)]">
-              {{ template.name }}
-            </h3>
-            <p
-              class="font-[Inter] text-xs text-[var(--color-accent)] tracking-wider uppercase mt-1"
-            >
-              {{ template.category }} · {{ template.paperSize }}
-            </p>
-            <p class="font-[Lora] text-sm text-[var(--color-ink-light)] italic mt-2">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <h3
+                class="font-[Playfair_Display] text-lg font-bold text-[var(--color-ink)] group-hover:text-[var(--color-accent)] transition-colors"
+              >
+                {{ template.name }}
+              </h3>
+              <span
+                class="font-[Inter] text-[10px] tracking-widest uppercase text-[var(--color-ink-light)] border border-[var(--color-ink)]/20 px-1.5 py-0.5"
+              >
+                {{ template.paperSize }}
+              </span>
+            </div>
+            <p class="font-[Lora] text-xs text-[var(--color-ink-light)] leading-relaxed mb-3">
               {{ template.description }}
             </p>
-            <p class="font-[Inter] text-xs text-[var(--color-ink-light)] mt-2">
-              {{ template.slots.filter((s) => s.type === 'image').length }} photo slots
-            </p>
+            <div
+              class="flex items-center gap-3 text-[11px] font-[Inter] text-[var(--color-ink-light)] border-t border-[var(--color-ink)]/10 pt-2"
+            >
+              <span
+                >{{ template.slots.filter((s) => s.type === 'image').length }} Foto Slot</span
+              >
+              <span>·</span>
+              <span
+                >{{ template.slots.filter((s) => s.type === 'text').length }} Kolom Teks</span
+              >
+            </div>
           </div>
         </div>
       </div>

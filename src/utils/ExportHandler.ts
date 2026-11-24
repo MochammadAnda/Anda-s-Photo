@@ -1,6 +1,7 @@
 import { useEditorStore } from '@/stores/editor'
 import { jsPDF } from 'jspdf'
 import { getTextureById, applyCanvasTexture } from '@/utils/paper-textures'
+import { drawStampOnCanvas } from '@/utils/stamps'
 import type { TemplateSlot } from '@/templates/newspaper-templates'
 
 function getFilterStyle(filter?: string): string {
@@ -11,6 +12,12 @@ function getFilterStyle(filter?: string): string {
       return 'sepia(80%) contrast(1.1)'
     case 'vintage':
       return 'sepia(40%) contrast(1.1) brightness(0.95) saturate(0.8)'
+    case 'noir':
+      return 'grayscale(100%) contrast(1.45) brightness(0.92)'
+    case 'halftone':
+      return 'grayscale(100%) contrast(1.7) brightness(1.05)'
+    case 'warm':
+      return 'sepia(55%) contrast(1.15) brightness(0.9) saturate(0.85)'
     default:
       return 'none'
   }
@@ -68,6 +75,14 @@ function createRenderCanvas(): Promise<HTMLCanvasElement> {
 
         if (slot.type === 'text') {
           const text = content?.text ?? slot.content ?? ''
+
+          if (slot.backgroundColor) {
+            ctx.save()
+            ctx.fillStyle = slot.backgroundColor
+            ctx.fillRect(slot.x * scale, slot.y * scale, slot.w * scale, slot.h * scale)
+            ctx.restore()
+          }
+
           drawSlotBorders(ctx, slot, scale, inkColor)
           if (!text) continue
 
@@ -78,12 +93,15 @@ function createRenderCanvas(): Promise<HTMLCanvasElement> {
           const fontSize = (slot.fontSize || 12) * scale
           const fontFamily = slot.fontFamily || 'serif'
           ctx.font = `${fontStyle}${fontWeight} ${fontSize}px ${fontFamily}`
-          ctx.fillStyle = inkColor
+          ctx.fillStyle = slot.color || inkColor
           ctx.textBaseline = 'top'
 
-          const x = slot.x * scale
-          const y = slot.y * scale + (slot.borderTop ? 8 : 0)
-          const maxWidth = slot.w * scale
+          const padH = slot.padding ? 8 * scale : 0
+          const padV = slot.padding ? 6 * scale : (slot.borderTop ? 8 * scale : 0)
+
+          const x = slot.x * scale + padH
+          const y = slot.y * scale + padV
+          const maxWidth = Math.max(10, slot.w * scale - padH * 2)
           const lineHeightVal = (slot.lineHeight || 1.4) * fontSize
 
           if (slot.textAlign === 'center') {
@@ -143,10 +161,20 @@ function createRenderCanvas(): Promise<HTMLCanvasElement> {
             content.imageZoom ?? 1,
             content.imageOffsetX ?? 50,
             content.imageOffsetY ?? 50,
+            content.imageRotation ?? 0,
+            content.imageFlipH ?? false,
           )
 
           ctx.restore()
+
+          const photoBorder = content.photoBorder || store.activePhotoBorder || 'hairline'
+          drawPhotoBorder(ctx, slot, scale, photoBorder, inkColor)
         }
+      }
+
+      // Draw active vintage stamps on top
+      for (const stamp of store.activeStamps) {
+        drawStampOnCanvas(ctx, stamp, scale)
       }
 
       resolve(canvas)
@@ -162,6 +190,12 @@ function drawSlotBorders(
 ) {
   ctx.strokeStyle = inkColor
   ctx.lineWidth = 1 * scale
+
+  if (slot.border) {
+    ctx.strokeRect(slot.x * scale, slot.y * scale, slot.w * scale, slot.h * scale)
+    return
+  }
+
   if (slot.borderTop) {
     ctx.beginPath()
     ctx.moveTo(slot.x * scale, slot.y * scale)
@@ -174,6 +208,69 @@ function drawSlotBorders(
     ctx.lineTo((slot.x + slot.w) * scale, (slot.y + slot.h) * scale)
     ctx.stroke()
   }
+  if (slot.borderLeft) {
+    ctx.lineWidth = (typeof slot.borderLeft === 'string' ? 3 : 2) * scale
+    ctx.beginPath()
+    ctx.moveTo(slot.x * scale, slot.y * scale)
+    ctx.lineTo(slot.x * scale, (slot.y + slot.h) * scale)
+    ctx.stroke()
+  }
+  if (slot.borderRight) {
+    ctx.lineWidth = (typeof slot.borderRight === 'string' ? 3 : 2) * scale
+    ctx.beginPath()
+    ctx.moveTo((slot.x + slot.w) * scale, slot.y * scale)
+    ctx.lineTo((slot.x + slot.w) * scale, (slot.y + slot.h) * scale)
+    ctx.stroke()
+  }
+}
+
+function drawPhotoBorder(
+  ctx: CanvasRenderingContext2D,
+  slot: TemplateSlot,
+  scale: number,
+  borderStyle: string,
+  inkColor: string = '#1A1A1A',
+) {
+  if (borderStyle === 'none') return
+
+  ctx.save()
+  ctx.strokeStyle = inkColor
+
+  if (borderStyle === 'hairline') {
+    ctx.lineWidth = 1 * scale
+    ctx.strokeRect(slot.x * scale, slot.y * scale, slot.w * scale, slot.h * scale)
+  } else if (borderStyle === 'double') {
+    ctx.lineWidth = 1 * scale
+    ctx.strokeRect(slot.x * scale, slot.y * scale, slot.w * scale, slot.h * scale)
+    const inset = 3 * scale
+    ctx.strokeRect(
+      slot.x * scale + inset,
+      slot.y * scale + inset,
+      slot.w * scale - inset * 2,
+      slot.h * scale - inset * 2,
+    )
+  } else if (borderStyle === 'album') {
+    const borderW = 5 * scale
+    ctx.lineWidth = borderW
+    ctx.strokeStyle = '#FAF8F3'
+    ctx.strokeRect(
+      slot.x * scale + borderW / 2,
+      slot.y * scale + borderW / 2,
+      slot.w * scale - borderW,
+      slot.h * scale - borderW,
+    )
+    ctx.lineWidth = 1 * scale
+    ctx.strokeStyle = inkColor
+    ctx.strokeRect(slot.x * scale, slot.y * scale, slot.w * scale, slot.h * scale)
+    ctx.strokeRect(
+      slot.x * scale + borderW,
+      slot.y * scale + borderW,
+      slot.w * scale - borderW * 2,
+      slot.h * scale - borderW * 2,
+    )
+  }
+
+  ctx.restore()
 }
 
 function drawImageCover(
@@ -186,7 +283,29 @@ function drawImageCover(
   zoom: number = 1,
   offsetX: number = 50,
   offsetY: number = 50,
+  rotation: number = 0,
+  flipH: boolean = false,
 ) {
+  ctx.save()
+
+  // Clip exactly to the slot rectangle
+  ctx.beginPath()
+  ctx.rect(dx, dy, dw, dh)
+  ctx.clip()
+
+  // Apply rotation and flip around slot center
+  const cx = dx + dw / 2
+  const cy = dy + dh / 2
+
+  ctx.translate(cx, cy)
+  if (rotation !== 0) {
+    ctx.rotate((rotation * Math.PI) / 180)
+  }
+  if (flipH) {
+    ctx.scale(-1, 1)
+  }
+  ctx.translate(-cx, -cy)
+
   const imgRatio = img.naturalWidth / img.naturalHeight
   const slotRatio = dw / dh
   let sx: number, sy: number, sw: number, sh: number
@@ -218,6 +337,7 @@ function drawImageCover(
   }
 
   ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh)
+  ctx.restore()
 }
 
 function wrapText(
@@ -313,7 +433,7 @@ export async function printPreview(): Promise<void> {
       </head>
       <body>
         <img src="${imgData}" />
-        <script>window.onload = function() { window.print(); }<\/script>
+        <script>window.onload = function() { window.print(); }</script>
       </body>
     </html>
   `)

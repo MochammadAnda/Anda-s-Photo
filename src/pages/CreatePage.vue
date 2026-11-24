@@ -7,6 +7,7 @@ import PhotoUploader from '@/components/PhotoUploader.vue'
 import EditorCanvas from '@/components/EditorCanvas.vue'
 import ToolbarEditor from '@/components/ToolbarEditor.vue'
 import PreviewPaper from '@/components/PreviewPaper.vue'
+import CameraCaptureModal from '@/components/CameraCaptureModal.vue'
 import { exportAsPNG, exportAsJPG, exportAsPDF, printPreview } from '@/utils/ExportHandler'
 
 const store = useEditorStore()
@@ -293,5 +294,8 @@ function resetAll() {
         </div>
       </div>
     </main>
+
+    <!-- Camera Capture Modal -->
+    <CameraCaptureModal v-if="store.isCameraOpen" />
   </div>
 </template>
