@@ -14,8 +14,8 @@ export interface TemplateSlot {
   letterSpacing?: number
   lineHeight?: number
   textTransform?: string
-  borderTop?: boolean
-  borderBottom?: boolean
+  borderTop?: boolean | string
+  borderBottom?: boolean | string
   borderLeft?: boolean | string
   borderRight?: boolean | string
   border?: string
@@ -24,6 +24,7 @@ export interface TemplateSlot {
   padding?: string
   placeholder?: string
   editable?: boolean
+  hasDropCap?: boolean
 }
 
 export type TemplateTheme = 'city' | 'wedding' | 'graduation' | 'birthday' | 'travel'

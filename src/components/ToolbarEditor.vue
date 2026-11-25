@@ -34,6 +34,15 @@ function resetZoom() {
   store.setZoom(1)
 }
 
+function fitScreen() {
+  const container = document.querySelector('.canvas-scroll-container')
+  if (container) {
+    store.autoFitZoom(container.clientWidth, container.clientHeight)
+  } else {
+    store.autoFitZoom(window.innerWidth)
+  }
+}
+
 function applyFilterToAll() {
   for (const [, content] of store.slotContents) {
     if (content.type === 'image') {
@@ -78,9 +87,15 @@ function onAddStamp(stampType: StampType) {
         </button>
         <button
           @click="resetZoom"
-          class="ml-2 font-[Inter] text-xs text-[var(--color-accent)] hover:text-[var(--color-ink)] transition-colors cursor-pointer"
+          class="font-[Inter] text-xs text-[var(--color-ink-light)] hover:text-[var(--color-ink)] transition-colors cursor-pointer px-1.5 py-1 border border-[var(--color-ink)]/10"
         >
-          Reset
+          100%
+        </button>
+        <button
+          @click="fitScreen"
+          class="font-[Inter] text-xs text-[var(--color-accent)] hover:text-[var(--color-ink)] font-semibold transition-colors cursor-pointer px-1.5 py-1 border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/5"
+        >
+          Fit Layar
         </button>
       </div>
     </div>
@@ -135,6 +150,43 @@ function onAddStamp(stampType: StampType) {
             {{ t.name }}
           </span>
         </button>
+      </div>
+
+      <!-- Realism Toggles: Paper Crease & Edge Vignette -->
+      <div class="mt-2.5 pt-2 border-t border-[var(--color-ink)]/10 flex flex-col gap-1.5">
+        <div class="flex items-center justify-between">
+          <span class="font-[Inter] text-[10px] text-[var(--color-ink)]/80 flex items-center gap-1">
+            <span>📐</span> Lipatan Kertas (Crease)
+          </span>
+          <button
+            @click="store.togglePaperCrease()"
+            :class="[
+              'px-2 py-0.5 text-[9px] font-[Inter] tracking-wider uppercase border transition-colors cursor-pointer',
+              store.paperCrease
+                ? 'bg-[var(--color-ink)] text-[var(--color-cream)] border-[var(--color-ink)]'
+                : 'bg-transparent text-[var(--color-ink)]/60 border-[var(--color-ink)]/20 hover:border-[var(--color-ink)]',
+            ]"
+          >
+            {{ store.paperCrease ? 'Aktif' : 'Nonaktif' }}
+          </button>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <span class="font-[Inter] text-[10px] text-[var(--color-ink)]/80 flex items-center gap-1">
+            <span>🍂</span> Noda Tepi (Vignette)
+          </span>
+          <button
+            @click="store.togglePaperVignette()"
+            :class="[
+              'px-2 py-0.5 text-[9px] font-[Inter] tracking-wider uppercase border transition-colors cursor-pointer',
+              store.paperVignette
+                ? 'bg-[var(--color-ink)] text-[var(--color-cream)] border-[var(--color-ink)]'
+                : 'bg-transparent text-[var(--color-ink)]/60 border-[var(--color-ink)]/20 hover:border-[var(--color-ink)]',
+            ]"
+          >
+            {{ store.paperVignette ? 'Aktif' : 'Nonaktif' }}
+          </button>
+        </div>
       </div>
     </div>
 

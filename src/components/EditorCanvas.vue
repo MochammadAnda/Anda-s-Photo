@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useEditorStore } from '@/stores/editor'
 import type { TemplateSlot } from '@/templates/newspaper-templates'
-import { getTextureById, getPaperOverlayStyle } from '@/utils/paper-textures'
+import { getTextureById, getPaperOverlayStyle, getPaperCreaseOverlayStyle } from '@/utils/paper-textures'
 import { VINTAGE_STAMPS } from '@/utils/stamps'
 
 const store = useEditorStore()
@@ -28,6 +28,96 @@ const stampDragStartX = ref(0)
 const stampDragStartY = ref(0)
 const stampOrigX = ref(0)
 const stampOrigY = ref(0)
+
+// Viewport & Responsive Zoom
+const canvasViewportRef = ref<HTMLDivElement | null>(null)
+const initialPinchDistance = ref<number | null>(null)
+const initialPinchZoom = ref(1)
+
+// Mobile text editor modal
+const mobileEditingSlot = ref<TemplateSlot | null>(null)
+const mobileEditText = ref('')
+
+function zoomIn() {
+  store.setZoom(store.zoomLevel + 0.1)
+}
+
+function zoomOut() {
+  store.setZoom(store.zoomLevel - 0.1)
+}
+
+function fitToAvailableSpace() {
+  const container = canvasViewportRef.value?.parentElement
+  if (container) {
+    store.autoFitZoom(container.clientWidth, container.clientHeight)
+  } else {
+    store.autoFitZoom(window.innerWidth)
+  }
+}
+
+function onSlotTextClick(slot: TemplateSlot) {
+  if (!slot.editable) return
+  if (window.innerWidth < 1024) {
+    const content = store.getSlotContent(slot.id)
+    mobileEditText.value = content?.text ?? slot.content ?? ''
+    mobileEditingSlot.value = slot
+  }
+}
+
+function saveMobileText() {
+  if (mobileEditingSlot.value) {
+    store.updateSlotText(mobileEditingSlot.value.id, mobileEditText.value)
+    mobileEditingSlot.value = null
+  }
+}
+
+function cancelMobileText() {
+  mobileEditingSlot.value = null
+  mobileEditText.value = ''
+}
+
+// Touch Pinch-to-Zoom on Canvas Viewport
+function onCanvasTouchStart(e: TouchEvent) {
+  if (e.touches.length === 2) {
+    const t1 = e.touches[0]!
+    const t2 = e.touches[1]!
+    initialPinchDistance.value = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY)
+    initialPinchZoom.value = store.zoomLevel
+  }
+}
+
+function onCanvasTouchMove(e: TouchEvent) {
+  if (e.touches.length === 2 && initialPinchDistance.value !== null) {
+    const t1 = e.touches[0]!
+    const t2 = e.touches[1]!
+    const currentDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY)
+    const factor = currentDist / initialPinchDistance.value
+    store.setZoom(initialPinchZoom.value * factor)
+  }
+}
+
+function onCanvasTouchEnd(e: TouchEvent) {
+  if (e.touches.length < 2) {
+    initialPinchDistance.value = null
+  }
+}
+
+onMounted(() => {
+  if (window.innerWidth < 1024) {
+    fitToAvailableSpace()
+  }
+  window.addEventListener('resize', handleWindowResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleWindowResize)
+})
+
+function handleWindowResize() {
+  if (window.innerWidth < 1024) {
+    fitToAvailableSpace()
+  }
+}
 
 const template = computed(() => store.selectedTemplate)
 const currentTexture = computed(() => getTextureById(store.paperTexture))
@@ -318,19 +408,32 @@ function getStampDef(stampType: string) {
 </script>
 
 <template>
-  <div
-    v-if="template"
-    class="relative bg-white shadow-2xl"
-    :style="{
-      width: template.width + 'px',
-      height: template.height + 'px',
-      background: store.paperTexture !== 'plain' ? currentTexture.background : template.background,
-      color: currentTexture.inkColor,
-      '--color-ink': currentTexture.inkColor,
-      transform: `scale(${store.zoomLevel})`,
-      transformOrigin: 'top center',
-    }"
-  >
+  <div class="relative flex flex-col items-center">
+    <!-- Viewport container that scales width & height to prevent horizontal scrollbar overflows on mobile -->
+    <div
+      ref="canvasViewportRef"
+      class="relative select-none flex-shrink-0 transition-[width,height] duration-75"
+      :style="{
+        width: template ? `${Math.round(template.width * store.zoomLevel)}px` : 'auto',
+        height: template ? `${Math.round(template.height * store.zoomLevel)}px` : 'auto',
+      }"
+      @touchstart="onCanvasTouchStart"
+      @touchmove="onCanvasTouchMove"
+      @touchend="onCanvasTouchEnd"
+    >
+      <div
+        v-if="template"
+        class="relative bg-white shadow-2xl"
+        :style="{
+          width: template.width + 'px',
+          height: template.height + 'px',
+          background: store.paperTexture !== 'plain' ? currentTexture.background : template.background,
+          color: currentTexture.inkColor,
+          '--color-ink': currentTexture.inkColor,
+          transform: `scale(${store.zoomLevel})`,
+          transformOrigin: 'top left',
+        }"
+      >
     <!-- Hidden file input for direct slot upload -->
     <input
       ref="slotFileInput"
@@ -565,6 +668,7 @@ function getStampDef(stampType: string) {
                 : 'flex-start',
         }"
         @dblclick="startEditText(slot)"
+        @click="onSlotTextClick(slot)"
       >
         <!-- Editing mode -->
         <textarea
@@ -586,16 +690,20 @@ function getStampDef(stampType: string) {
         <!-- Display mode -->
         <span
           v-else
-          class="whitespace-pre-wrap w-full"
-          :class="{ 'hover:bg-[var(--color-ink)]/[0.03]': slot.editable }"
+          class="whitespace-pre-wrap w-full cursor-pointer"
+          :class="{
+            'hover:bg-[var(--color-ink)]/[0.03]': slot.editable,
+            'has-drop-cap': slot.hasDropCap,
+          }"
         >
           {{ store.getSlotContent(slot.id)?.text ?? slot.content }}
         </span>
         <!-- Edit indicator -->
         <div
           v-if="slot.editable && editingSlot !== slot.id"
-          class="absolute -right-1 -top-1 w-4 h-4 bg-[var(--color-accent)] text-white flex items-center justify-center text-[8px] opacity-0 group-hover:opacity-100 transition-opacity z-30 rounded-full"
-          title="Double-click to edit"
+          class="absolute -right-1 -top-1 w-4 h-4 bg-[var(--color-accent)] text-white flex items-center justify-center text-[8px] opacity-0 group-hover:opacity-100 transition-opacity z-30 rounded-full cursor-pointer"
+          title="Klik untuk mengedit teks"
+          @click.stop="onSlotTextClick(slot)"
         >
           ✎
         </div>
@@ -712,5 +820,126 @@ function getStampDef(stampType: string) {
         </button>
       </div>
     </div>
+
+    <!-- Realistic Paper Crease & Vignette Overlay (over content, physical paper fold simulation) -->
+    <div
+      v-if="store.paperCrease || store.paperVignette"
+      class="absolute inset-0 pointer-events-none z-[25]"
+      :style="getPaperCreaseOverlayStyle({ crease: store.paperCrease, vignette: store.paperVignette })"
+    ></div>
+      </div>
+    </div>
+
+    <!-- Floating Quick Zoom Widget (Available on Mobile & Desktop) -->
+    <div
+      class="fixed bottom-20 lg:bottom-6 right-4 sm:right-6 z-30 bg-[var(--color-paper)]/95 backdrop-blur-md border border-[var(--color-ink)]/25 shadow-xl px-2.5 py-1.5 flex items-center gap-1.5 rounded-sm"
+    >
+      <button
+        @click="zoomOut"
+        class="w-7 h-7 flex items-center justify-center text-sm font-bold border border-[var(--color-ink)]/15 hover:bg-[var(--color-ink)] hover:text-white transition-colors cursor-pointer rounded-xs"
+        title="Zoom Out"
+      >
+        −
+      </button>
+      <span class="font-[Inter] text-xs font-semibold px-1 min-w-[42px] text-center text-[var(--color-ink)]">
+        {{ Math.round(store.zoomLevel * 100) }}%
+      </span>
+      <button
+        @click="zoomIn"
+        class="w-7 h-7 flex items-center justify-center text-sm font-bold border border-[var(--color-ink)]/15 hover:bg-[var(--color-ink)] hover:text-white transition-colors cursor-pointer rounded-xs"
+        title="Zoom In"
+      >
+        +
+      </button>
+      <div class="h-4 w-px bg-[var(--color-ink)]/15 mx-0.5"></div>
+      <button
+        @click="fitToAvailableSpace"
+        class="px-2 py-1 text-[11px] font-[Inter] font-semibold tracking-wider uppercase border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 text-[var(--color-ink)] hover:bg-[var(--color-accent)] hover:text-white transition-colors cursor-pointer flex items-center gap-1 rounded-xs"
+        title="Sesuaikan Pas Layar (Fit Screen)"
+      >
+        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+        </svg>
+        Fit
+      </button>
+      <button
+        @click="store.setZoom(1)"
+        class="px-1.5 py-1 text-[11px] font-[Inter] text-[var(--color-ink-light)] hover:text-[var(--color-ink)] transition-colors cursor-pointer"
+        title="Ukuran Asli 100%"
+      >
+        100%
+      </button>
+    </div>
+
+    <!-- Mobile-Friendly Text Edit Modal -->
+    <div
+      v-if="mobileEditingSlot"
+      class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+      @click.self="cancelMobileText"
+    >
+      <div
+        class="w-full max-w-lg bg-[var(--color-paper)] border-2 border-[var(--color-ink)] shadow-2xl p-5 flex flex-col gap-4 animate-in zoom-in-95 duration-150"
+      >
+        <div class="flex items-center justify-between border-b border-[var(--color-ink)]/15 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-[var(--color-accent)]"></span>
+            <h3 class="font-[Playfair_Display] text-base font-bold text-[var(--color-ink)]">
+              Edit Teks Koran
+            </h3>
+          </div>
+          <button
+            @click="cancelMobileText"
+            class="text-[var(--color-ink-light)] hover:text-[var(--color-ink)] font-bold text-lg px-2 cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[11px] font-[Inter] font-medium tracking-wider text-[var(--color-ink-light)] uppercase">
+            Isi Narasi / Berita:
+          </label>
+          <textarea
+            v-model="mobileEditText"
+            rows="6"
+            class="w-full p-3 bg-[var(--color-cream)]/70 border border-[var(--color-ink)]/30 font-[Libre_Baskerville] text-sm text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-ink)] focus:ring-1 focus:ring-[var(--color-ink)] leading-relaxed"
+            placeholder="Tuliskan berita atau catatan koran di sini..."
+            autofocus
+          ></textarea>
+          <span class="text-[10px] font-[Inter] text-[var(--color-ink-light)] italic">
+            * Teks akan otomatis disesuaikan dengan tipografi koran klasik pada layout.
+          </span>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-[var(--color-ink)]/10">
+          <button
+            @click="cancelMobileText"
+            class="px-4 py-2 border border-[var(--color-ink)]/20 text-[var(--color-ink)] font-[Inter] text-xs uppercase tracking-wider hover:bg-[var(--color-ink)]/5 cursor-pointer"
+          >
+            Batal
+          </button>
+          <button
+            @click="saveMobileText"
+            class="px-5 py-2 bg-[var(--color-ink)] text-[var(--color-cream)] font-[Inter] text-xs font-semibold uppercase tracking-wider hover:bg-[var(--color-ink-light)] transition-colors cursor-pointer"
+          >
+            Simpan Teks
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.has-drop-cap::first-letter {
+  float: left;
+  font-family: 'Playfair Display', serif;
+  font-size: 3.4em;
+  line-height: 0.78;
+  padding-right: 6px;
+  padding-top: 2px;
+  padding-bottom: 0;
+  font-weight: 900;
+  color: var(--color-ink);
+}
+</style>

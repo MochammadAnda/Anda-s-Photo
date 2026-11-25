@@ -1,16 +1,21 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useEditorStore } from '@/stores/editor'
-import { getTextureById, getPaperOverlayStyle } from '@/utils/paper-textures'
+import { getTextureById, getPaperOverlayStyle, getPaperCreaseOverlayStyle } from '@/utils/paper-textures'
 import { VINTAGE_STAMPS } from '@/utils/stamps'
 
 const store = useEditorStore()
 const previewMode = ref<'flat' | '3d'>('flat')
-const previewScale = ref(0.55)
+const previewScale = ref(0.5)
 const paperRotateX = ref(10)
 const paperRotateY = ref(-5)
 const isDragging3D = ref(false)
 const lastMouse = ref({ x: 0, y: 0 })
+const previewAreaRef = ref<HTMLDivElement | null>(null)
+
+// Pinch-to-zoom on preview
+const initialPinchDist = ref<number | null>(null)
+const initialPinchScale = ref(0.5)
 
 const template = computed(() => store.selectedTemplate)
 const currentTexture = computed(() => getTextureById(store.paperTexture))
@@ -93,6 +98,7 @@ const paperTransform = computed(() => {
   return `scale(${s})`
 })
 
+// Mouse 3D rotation
 function startDrag3D(e: MouseEvent) {
   if (previewMode.value !== '3d') return
   isDragging3D.value = true
@@ -114,51 +120,102 @@ function endDrag3D() {
   isDragging3D.value = false
 }
 
-function zoomPreview(delta: number) {
-  previewScale.value = Math.max(0.2, Math.min(1, previewScale.value + delta))
+// Touch 3D rotation & pinch-zoom
+function onPreviewTouchStart(e: TouchEvent) {
+  if (e.touches.length === 2) {
+    const t1 = e.touches[0]!
+    const t2 = e.touches[1]!
+    initialPinchDist.value = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY)
+    initialPinchScale.value = previewScale.value
+  } else if (e.touches.length === 1 && previewMode.value === '3d') {
+    isDragging3D.value = true
+    const touch = e.touches[0]!
+    lastMouse.value = { x: touch.clientX, y: touch.clientY }
+  }
 }
+
+function onPreviewTouchMove(e: TouchEvent) {
+  if (e.touches.length === 2 && initialPinchDist.value !== null) {
+    e.preventDefault()
+    const t1 = e.touches[0]!
+    const t2 = e.touches[1]!
+    const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY)
+    const factor = dist / initialPinchDist.value
+    previewScale.value = Math.max(0.18, Math.min(1.2, Number((initialPinchScale.value * factor).toFixed(2))))
+  } else if (e.touches.length === 1 && isDragging3D.value) {
+    const touch = e.touches[0]!
+    const dx = touch.clientX - lastMouse.value.x
+    const dy = touch.clientY - lastMouse.value.y
+    paperRotateY.value += dx * 0.4
+    paperRotateX.value -= dy * 0.4
+    paperRotateX.value = Math.max(-30, Math.min(30, paperRotateX.value))
+    paperRotateY.value = Math.max(-30, Math.min(30, paperRotateY.value))
+    lastMouse.value = { x: touch.clientX, y: touch.clientY }
+  }
+}
+
+function onPreviewTouchEnd(e: TouchEvent) {
+  if (e.touches.length < 2) {
+    initialPinchDist.value = null
+  }
+  if (e.touches.length === 0) {
+    isDragging3D.value = false
+  }
+}
+
+function zoomPreview(delta: number) {
+  previewScale.value = Math.max(0.18, Math.min(1.2, Number((previewScale.value + delta).toFixed(2))))
+}
+
+function autoFitPreview() {
+  if (!template.value) return
+  const container = previewAreaRef.value
+  const availW = container ? container.clientWidth : window.innerWidth
+  const availH = container ? container.clientHeight : window.innerHeight - 170
+  const padW = availW < 640 ? 16 : 48
+  const padH = availW < 640 ? 16 : 48
+  const scaleW = (availW - padW) / template.value.width
+  const scaleH = (availH - padH) / template.value.height
+  const optimal = Math.min(scaleW, scaleH)
+  previewScale.value = Math.max(0.18, Math.min(0.85, Number(optimal.toFixed(2))))
+}
+
+onMounted(() => {
+  autoFitPreview()
+  window.addEventListener('resize', autoFitPreview)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', autoFitPreview)
+})
 </script>
 
 <template>
-  <div class="flex flex-col h-full">
+  <div class="flex flex-col h-full overflow-hidden">
     <!-- Preview Controls -->
     <div
-      class="flex items-center justify-between py-3 px-4 border-b border-[var(--color-ink)]/10 bg-[var(--color-paper)]"
+      class="flex items-center justify-between py-2 px-3 sm:px-5 border-b border-[var(--color-ink)]/10 bg-[var(--color-paper)] flex-shrink-0"
     >
-      <h2 class="font-[Playfair_Display] text-xl font-bold text-[var(--color-ink)]">Preview</h2>
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-[var(--color-accent)] hidden sm:inline-block"></span>
+        <h2 class="font-[Playfair_Display] text-base sm:text-lg font-bold text-[var(--color-ink)]">
+          Pratinjau
+        </h2>
+        <span class="text-[10px] font-[Inter] tracking-wider text-[var(--color-ink-light)] uppercase hidden md:inline">
+          · Siap Cetak
+        </span>
+      </div>
 
-      <div class="flex items-center gap-4">
-        <!-- Preview zoom -->
-        <div class="flex items-center gap-2">
-          <button
-            @click="zoomPreview(-0.05)"
-            class="w-7 h-7 border border-[var(--color-ink)]/20 flex items-center justify-center hover:bg-[var(--color-ink)] hover:text-[var(--color-cream)] transition-colors text-xs"
-          >
-            −
-          </button>
-          <span
-            class="font-[Inter] text-[11px] text-[var(--color-ink-light)] w-10 text-center tabular-nums"
-            >{{ Math.round(previewScale * 100) }}%</span
-          >
-          <button
-            @click="zoomPreview(0.05)"
-            class="w-7 h-7 border border-[var(--color-ink)]/20 flex items-center justify-center hover:bg-[var(--color-ink)] hover:text-[var(--color-cream)] transition-colors text-xs"
-          >
-            +
-          </button>
-        </div>
-
-        <div class="h-5 w-px bg-[var(--color-ink)]/15"></div>
-
-        <!-- View mode toggle -->
-        <div class="flex items-center gap-1">
+      <div class="flex items-center gap-1.5 sm:gap-3">
+        <!-- View mode toggle: Flat vs 3D -->
+        <div class="flex items-center border border-[var(--color-ink)]/20 p-0.5 rounded-xs bg-[var(--color-cream)]/40">
           <button
             @click="previewMode = 'flat'"
             :class="[
-              'px-3 py-1.5 text-[11px] font-[Inter] tracking-wider uppercase border transition-colors',
+              'px-2.5 py-1 text-[11px] font-[Inter] tracking-wider uppercase transition-colors cursor-pointer rounded-2xs',
               previewMode === 'flat'
-                ? 'bg-[var(--color-ink)] text-[var(--color-cream)] border-[var(--color-ink)]'
-                : 'border-[var(--color-ink)]/20 hover:border-[var(--color-ink)]',
+                ? 'bg-[var(--color-ink)] text-[var(--color-cream)] font-semibold shadow-xs'
+                : 'text-[var(--color-ink-light)] hover:text-[var(--color-ink)]',
             ]"
           >
             Flat
@@ -166,13 +223,43 @@ function zoomPreview(delta: number) {
           <button
             @click="previewMode = '3d'"
             :class="[
-              'px-3 py-1.5 text-[11px] font-[Inter] tracking-wider uppercase border transition-colors',
+              'px-2.5 py-1 text-[11px] font-[Inter] tracking-wider uppercase transition-colors cursor-pointer rounded-2xs',
               previewMode === '3d'
-                ? 'bg-[var(--color-ink)] text-[var(--color-cream)] border-[var(--color-ink)]'
-                : 'border-[var(--color-ink)]/20 hover:border-[var(--color-ink)]',
+                ? 'bg-[var(--color-ink)] text-[var(--color-cream)] font-semibold shadow-xs'
+                : 'text-[var(--color-ink-light)] hover:text-[var(--color-ink)]',
             ]"
           >
             3D Paper
+          </button>
+        </div>
+
+        <!-- Preview Zoom & Fit -->
+        <div class="flex items-center gap-1">
+          <button
+            @click="zoomPreview(-0.05)"
+            class="w-6 h-6 sm:w-7 sm:h-7 border border-[var(--color-ink)]/20 flex items-center justify-center hover:bg-[var(--color-ink)] hover:text-[var(--color-cream)] transition-colors text-xs cursor-pointer rounded-xs"
+            title="Perkecil"
+          >
+            −
+          </button>
+          <span
+            class="font-[Inter] text-[11px] text-[var(--color-ink)] w-8 sm:w-9 text-center tabular-nums font-semibold"
+          >
+            {{ Math.round(previewScale * 100) }}%
+          </span>
+          <button
+            @click="zoomPreview(0.05)"
+            class="w-6 h-6 sm:w-7 sm:h-7 border border-[var(--color-ink)]/20 flex items-center justify-center hover:bg-[var(--color-ink)] hover:text-[var(--color-cream)] transition-colors text-xs cursor-pointer rounded-xs"
+            title="Perbesar"
+          >
+            +
+          </button>
+          <button
+            @click="autoFitPreview"
+            class="ml-0.5 sm:ml-1 px-2 py-1 text-[11px] font-[Inter] font-semibold tracking-wider uppercase border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 text-[var(--color-ink)] hover:bg-[var(--color-accent)] hover:text-white transition-colors cursor-pointer rounded-xs"
+            title="Sesuaikan Pas Layar"
+          >
+            Fit
           </button>
         </div>
       </div>
@@ -180,13 +267,24 @@ function zoomPreview(delta: number) {
 
     <!-- Preview Area -->
     <div
-      class="flex-1 flex items-center justify-center overflow-auto bg-[var(--color-ink)]/[0.03] p-8"
+      ref="previewAreaRef"
+      class="flex-1 flex items-center justify-center overflow-auto bg-[var(--color-ink)]/[0.03] p-2 sm:p-6 relative select-none"
       :style="previewMode === '3d' ? { perspective: '1400px' } : undefined"
       @mousedown="startDrag3D"
       @mousemove="onDrag3D"
       @mouseup="endDrag3D"
       @mouseleave="endDrag3D"
+      @touchstart="onPreviewTouchStart"
+      @touchmove="onPreviewTouchMove"
+      @touchend="onPreviewTouchEnd"
     >
+      <!-- 3D Drag Tooltip Hint -->
+      <div
+        v-if="previewMode === '3d'"
+        class="absolute top-3 left-1/2 -translate-x-1/2 bg-black/75 backdrop-blur-xs text-white text-[10px] font-[Inter] tracking-wider uppercase px-3 py-1 rounded-full pointer-events-none shadow-md z-30"
+      >
+        ✦ Drag / Geser untuk Memutar 3D
+      </div>
       <!--
         Outer wrapper: reserves the scaled dimensions in the flow.
         Inner paper: renders at 1:1 (same as EditorCanvas), then CSS-scaled.
@@ -296,7 +394,10 @@ function zoomPreview(delta: number) {
                       : 'flex-start',
               }"
             >
-              <span class="whitespace-pre-wrap w-full">
+              <span
+                class="whitespace-pre-wrap w-full"
+                :class="{ 'has-drop-cap': slot.hasDropCap }"
+              >
                 {{ store.getSlotContent(slot.id)?.text ?? slot.content }}
               </span>
             </div>
@@ -372,16 +473,11 @@ function zoomPreview(delta: number) {
             </div>
           </div>
 
-          <!-- Decorative fold line (flat mode) -->
+          <!-- Realistic Paper Crease & Vignette Overlay (over content, physical paper fold simulation) -->
           <div
-            v-if="previewMode === 'flat'"
-            class="absolute left-0 right-0 pointer-events-none z-[3]"
-            :style="{
-              top: '50%',
-              height: '1px',
-              background:
-                'linear-gradient(90deg, transparent, rgba(0,0,0,0.04) 15%, rgba(0,0,0,0.06) 50%, rgba(0,0,0,0.04) 85%, transparent)',
-            }"
+            v-if="store.paperCrease || store.paperVignette"
+            class="absolute inset-0 pointer-events-none z-[25]"
+            :style="getPaperCreaseOverlayStyle({ crease: store.paperCrease, vignette: store.paperVignette })"
           ></div>
         </div>
       </div>
@@ -398,3 +494,17 @@ function zoomPreview(delta: number) {
     </div>
   </div>
 </template>
+
+<style scoped>
+.has-drop-cap::first-letter {
+  float: left;
+  font-family: 'Playfair Display', serif;
+  font-size: 3.4em;
+  line-height: 0.78;
+  padding-right: 6px;
+  padding-top: 2px;
+  padding-bottom: 0;
+  font-weight: 900;
+  color: var(--color-ink);
+}
+</style>

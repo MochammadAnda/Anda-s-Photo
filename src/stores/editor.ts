@@ -45,7 +45,9 @@ export const useEditorStore = defineStore('editor', () => {
   const currentStep = ref<'template' | 'editor' | 'preview'>('template')
   const activeFilter = ref<PhotoFilter>('none')
   const activePhotoBorder = ref<PhotoBorderStyle>('hairline')
-  const paperTexture = ref<PaperTextureId>('plain')
+  const paperTexture = ref<PaperTextureId>('aged')
+  const paperCrease = ref<boolean>(true)
+  const paperVignette = ref<boolean>(true)
   const showGrid = ref(false)
   const zoomLevel = ref(1)
   const isCameraOpen = ref(false)
@@ -287,7 +289,23 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   function setZoom(level: number) {
-    zoomLevel.value = Math.max(0.3, Math.min(2, level))
+    zoomLevel.value = Math.max(0.2, Math.min(2.5, Number(level.toFixed(2))))
+  }
+
+  function autoFitZoom(availableWidth: number, availableHeight?: number) {
+    if (!selectedTemplate.value) return 1
+    const padding = availableWidth < 640 ? 20 : 48
+    const targetW = Math.max(100, availableWidth - padding)
+    const scaleW = targetW / selectedTemplate.value.width
+    let scale = scaleW
+    if (availableHeight && availableHeight > 200) {
+      const targetH = Math.max(100, availableHeight - padding)
+      const scaleH = targetH / selectedTemplate.value.height
+      scale = Math.min(scaleW, scaleH)
+    }
+    const clamped = Math.max(0.2, Math.min(1.25, Number(scale.toFixed(2))))
+    setZoom(clamped)
+    return clamped
   }
 
   function toggleGrid() {
@@ -300,6 +318,14 @@ export const useEditorStore = defineStore('editor', () => {
 
   function setPaperTexture(id: PaperTextureId) {
     paperTexture.value = id
+  }
+
+  function togglePaperCrease() {
+    paperCrease.value = !paperCrease.value
+  }
+
+  function togglePaperVignette() {
+    paperVignette.value = !paperVignette.value
   }
 
   function openCamera(targetSlotId?: string) {
@@ -355,6 +381,8 @@ export const useEditorStore = defineStore('editor', () => {
     activeFilter,
     activePhotoBorder,
     paperTexture,
+    paperCrease,
+    paperVignette,
     showGrid,
     zoomLevel,
     isCameraOpen,
@@ -379,9 +407,12 @@ export const useEditorStore = defineStore('editor', () => {
     removeSlotContent,
     setStep,
     setZoom,
+    autoFitZoom,
     toggleGrid,
     setFilter,
     setPaperTexture,
+    togglePaperCrease,
+    togglePaperVignette,
     resetEditor,
     getSlotContent,
     autoAssignPhotos,

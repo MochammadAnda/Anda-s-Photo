@@ -1,6 +1,6 @@
 import { useEditorStore } from '@/stores/editor'
 import { jsPDF } from 'jspdf'
-import { getTextureById, applyCanvasTexture } from '@/utils/paper-textures'
+import { getTextureById, applyCanvasTexture, applyCanvasTopOverlay } from '@/utils/paper-textures'
 import { drawStampOnCanvas } from '@/utils/stamps'
 import type { TemplateSlot } from '@/templates/newspaper-templates'
 
@@ -114,6 +114,9 @@ function createRenderCanvas(): Promise<HTMLCanvasElement> {
               maxWidth,
               lineHeightVal,
               slot.letterSpacing ? slot.letterSpacing * scale : 0,
+              slot.hasDropCap ?? false,
+              slot.color || inkColor,
+              scale,
             )
           } else if (slot.textAlign === 'right') {
             ctx.textAlign = 'right'
@@ -125,6 +128,9 @@ function createRenderCanvas(): Promise<HTMLCanvasElement> {
               maxWidth,
               lineHeightVal,
               slot.letterSpacing ? slot.letterSpacing * scale : 0,
+              slot.hasDropCap ?? false,
+              slot.color || inkColor,
+              scale,
             )
           } else {
             ctx.textAlign = 'left'
@@ -136,6 +142,9 @@ function createRenderCanvas(): Promise<HTMLCanvasElement> {
               maxWidth,
               lineHeightVal,
               slot.letterSpacing ? slot.letterSpacing * scale : 0,
+              slot.hasDropCap ?? false,
+              slot.color || inkColor,
+              scale,
             )
           }
 
@@ -177,6 +186,12 @@ function createRenderCanvas(): Promise<HTMLCanvasElement> {
         drawStampOnCanvas(ctx, stamp, scale)
       }
 
+      // Apply realistic paper crease and aged vignette overlay on top
+      applyCanvasTopOverlay(ctx, store.paperTexture, canvas.width, canvas.height, {
+        crease: store.paperCrease,
+        vignette: store.paperVignette,
+      })
+
       resolve(canvas)
     })
   })
@@ -197,26 +212,58 @@ function drawSlotBorders(
   }
 
   if (slot.borderTop) {
-    ctx.beginPath()
-    ctx.moveTo(slot.x * scale, slot.y * scale)
-    ctx.lineTo((slot.x + slot.w) * scale, slot.y * scale)
-    ctx.stroke()
+    const isDouble = typeof slot.borderTop === 'string' && slot.borderTop.includes('double')
+    if (isDouble) {
+      ctx.lineWidth = 2 * scale
+      ctx.beginPath()
+      ctx.moveTo(slot.x * scale, slot.y * scale)
+      ctx.lineTo((slot.x + slot.w) * scale, slot.y * scale)
+      ctx.stroke()
+      ctx.lineWidth = 1 * scale
+      ctx.beginPath()
+      ctx.moveTo(slot.x * scale, slot.y * scale + 3 * scale)
+      ctx.lineTo((slot.x + slot.w) * scale, slot.y * scale + 3 * scale)
+      ctx.stroke()
+    } else {
+      ctx.lineWidth = (typeof slot.borderTop === 'string' && slot.borderTop.includes('2px') ? 2 : 1) * scale
+      ctx.beginPath()
+      ctx.moveTo(slot.x * scale, slot.y * scale)
+      ctx.lineTo((slot.x + slot.w) * scale, slot.y * scale)
+      ctx.stroke()
+    }
   }
   if (slot.borderBottom) {
-    ctx.beginPath()
-    ctx.moveTo(slot.x * scale, (slot.y + slot.h) * scale)
-    ctx.lineTo((slot.x + slot.w) * scale, (slot.y + slot.h) * scale)
-    ctx.stroke()
+    const isDouble = typeof slot.borderBottom === 'string' && slot.borderBottom.includes('double')
+    if (isDouble) {
+      ctx.lineWidth = 1 * scale
+      ctx.beginPath()
+      ctx.moveTo(slot.x * scale, (slot.y + slot.h) * scale - 3 * scale)
+      ctx.lineTo((slot.x + slot.w) * scale, (slot.y + slot.h) * scale - 3 * scale)
+      ctx.stroke()
+      ctx.lineWidth = 2 * scale
+      ctx.beginPath()
+      ctx.moveTo(slot.x * scale, (slot.y + slot.h) * scale)
+      ctx.lineTo((slot.x + slot.w) * scale, (slot.y + slot.h) * scale)
+      ctx.stroke()
+    } else {
+      ctx.lineWidth = (typeof slot.borderBottom === 'string' && slot.borderBottom.includes('2px') ? 2 : 1) * scale
+      ctx.beginPath()
+      ctx.moveTo(slot.x * scale, (slot.y + slot.h) * scale)
+      ctx.lineTo((slot.x + slot.w) * scale, (slot.y + slot.h) * scale)
+      ctx.stroke()
+    }
   }
   if (slot.borderLeft) {
-    ctx.lineWidth = (typeof slot.borderLeft === 'string' ? 3 : 2) * scale
+    const isThin = typeof slot.borderLeft === 'string' && slot.borderLeft.includes('1px')
+    ctx.lineWidth = (isThin ? 1 : (typeof slot.borderLeft === 'string' ? 3 : 2)) * scale
     ctx.beginPath()
     ctx.moveTo(slot.x * scale, slot.y * scale)
     ctx.lineTo(slot.x * scale, (slot.y + slot.h) * scale)
     ctx.stroke()
   }
   if (slot.borderRight) {
-    ctx.lineWidth = (typeof slot.borderRight === 'string' ? 3 : 2) * scale
+    const isThin = typeof slot.borderRight === 'string' && slot.borderRight.includes('1px')
+    ctx.lineWidth = (isThin ? 1 : (typeof slot.borderRight === 'string' ? 3 : 2)) * scale
     ctx.beginPath()
     ctx.moveTo((slot.x + slot.w) * scale, slot.y * scale)
     ctx.lineTo((slot.x + slot.w) * scale, (slot.y + slot.h) * scale)
@@ -348,7 +395,62 @@ function wrapText(
   maxWidth: number,
   lineHeight: number,
   _letterSpacing: number,
+  hasDropCap: boolean = false,
+  inkColor: string = '#1A1A1A',
+  scale: number = 1,
 ) {
+  if (!text) return
+
+  if (hasDropCap && text.trim().length > 1) {
+    const trimmed = text.trimStart()
+    const firstChar = trimmed[0]!
+    const rest = trimmed.slice(1)
+
+    const dropCapSize = lineHeight * 2.2
+    ctx.save()
+    ctx.font = `900 ${dropCapSize}px "Playfair Display", serif`
+    ctx.fillStyle = inkColor
+    ctx.textBaseline = 'top'
+    ctx.fillText(firstChar, x, y)
+    const capMetrics = ctx.measureText(firstChar)
+    const capWidth = capMetrics.width + 6 * scale
+    ctx.restore()
+
+    const paragraphs = rest.split('\n')
+    let currentY = y
+    let lineCount = 0
+
+    for (let pIdx = 0; pIdx < paragraphs.length; pIdx++) {
+      const paragraph = paragraphs[pIdx]!
+      if (paragraph.trim() === '') {
+        currentY += lineHeight * 0.5
+        continue
+      }
+      const words = paragraph.split(' ')
+      let line = ''
+
+      for (let i = 0; i < words.length; i++) {
+        const indent = pIdx === 0 && lineCount < 2 ? capWidth : 0
+        const curMax = maxWidth - indent
+        const testLine = line + words[i] + ' '
+        const metrics = ctx.measureText(testLine)
+        if (metrics.width > curMax && i > 0) {
+          ctx.fillText(line.trim(), x + indent, currentY)
+          line = words[i] + ' '
+          currentY += lineHeight
+          lineCount++
+        } else {
+          line = testLine
+        }
+      }
+      const indent = pIdx === 0 && lineCount < 2 ? capWidth : 0
+      ctx.fillText(line.trim(), x + indent, currentY)
+      currentY += lineHeight
+      lineCount++
+    }
+    return
+  }
+
   const paragraphs = text.split('\n')
   let currentY = y
 

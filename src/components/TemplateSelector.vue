@@ -31,11 +31,11 @@ function selectTemplate(template: NewspaperTemplate) {
       </p>
 
       <!-- Paper Size Buttons -->
-      <div class="inline-flex border-2 border-[var(--color-ink)] mb-6">
+      <div class="inline-flex border-2 border-[var(--color-ink)] mb-6 max-w-full">
         <button
           @click="store.setPaperSize('A4')"
           :class="[
-            'px-8 py-3 font-[Playfair_Display] text-sm tracking-widest uppercase transition-colors duration-200 cursor-pointer',
+            'px-4 sm:px-8 py-2.5 sm:py-3 font-[Playfair_Display] text-xs sm:text-sm tracking-widest uppercase transition-colors duration-200 cursor-pointer',
             store.selectedPaperSize === 'A4'
               ? 'bg-[var(--color-ink)] text-[var(--color-cream)]'
               : 'bg-transparent text-[var(--color-ink)] hover:bg-[var(--color-ink)]/10',
@@ -46,7 +46,7 @@ function selectTemplate(template: NewspaperTemplate) {
         <button
           @click="store.setPaperSize('A3')"
           :class="[
-            'px-8 py-3 font-[Playfair_Display] text-sm tracking-widest uppercase border-l-2 border-[var(--color-ink)] transition-colors duration-200 cursor-pointer',
+            'px-4 sm:px-8 py-2.5 sm:py-3 font-[Playfair_Display] text-xs sm:text-sm tracking-widest uppercase border-l-2 border-[var(--color-ink)] transition-colors duration-200 cursor-pointer',
             store.selectedPaperSize === 'A3'
               ? 'bg-[var(--color-ink)] text-[var(--color-cream)]'
               : 'bg-transparent text-[var(--color-ink)] hover:bg-[var(--color-ink)]/10',
