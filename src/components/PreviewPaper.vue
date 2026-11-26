@@ -374,7 +374,7 @@ onUnmounted(() => {
                 fontStyle: slot.fontStyle || 'normal',
                 textAlign: (slot.textAlign as any) || 'left',
                 letterSpacing: slot.letterSpacing ? slot.letterSpacing + 'px' : undefined,
-                lineHeight: slot.lineHeight || 1.4,
+                lineHeight: slot.id === 'masthead' ? (slot.lineHeight || 1.05) : (slot.lineHeight || 1.4),
                 textTransform: (slot.textTransform as any) || 'none',
                 backgroundColor: slot.backgroundColor || undefined,
                 color: slot.color || undefined,
@@ -385,7 +385,7 @@ onUnmounted(() => {
                 borderRight: slot.border ? undefined : (typeof slot.borderRight === 'string' ? slot.borderRight : (slot.borderRight ? '3px solid var(--color-ink)' : undefined)),
                 padding: slot.padding || (slot.borderTop || slot.borderBottom ? '4px 0' : '0'),
                 display: 'flex',
-                alignItems: slot.borderTop && slot.borderBottom && !slot.padding ? 'center' : 'flex-start',
+                alignItems: slot.id === 'masthead' || (slot.borderTop && slot.borderBottom && !slot.padding) ? 'center' : 'flex-start',
                 justifyContent:
                   slot.textAlign === 'center'
                     ? 'center'
